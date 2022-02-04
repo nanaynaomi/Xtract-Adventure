@@ -1,0 +1,8 @@
+version: "3.4"
+services:
+  slackbot:
+    image: slack_dev:latest
+    volumes:
+      - ./slackbot:/slackbot
+    env_file:
+      - ./dev.conf
