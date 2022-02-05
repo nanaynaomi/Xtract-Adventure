@@ -11,6 +11,7 @@ RUN apt-get update \
     bash \
     vim \
     curl \
+    dos2unix \
     python3 python3-venv python3-pip \ 
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,5 +28,6 @@ RUN echo "alias python=python3" >> /root/.bashrc
 
 COPY slackbot /slackbot
 COPY Entrypoint.sh /usr/sbin
+RUN dos2unix /usr/sbin/Entrypoint.sh
 
 ENTRYPOINT ["/usr/sbin/Entrypoint.sh"]
