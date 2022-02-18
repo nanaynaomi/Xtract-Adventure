@@ -16,4 +16,4 @@ services:
     env_file:
       - ./dev.conf
     ports:
-      - "3306:3306"
+      - "3307:3306"

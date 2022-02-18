@@ -3,7 +3,9 @@ import logging
 from flask import Flask
 from slack import WebClient
 from slackeventsapi import SlackEventAdapter
-from coinbot import CoinBot
+# from coinbot import CoinBot
+from mod_adventurelib import *
+from demo_game_test import *
 
 # Initialize a Flask app to host the events adapter
 app = Flask(__name__)
@@ -13,44 +15,42 @@ slack_events_adapter = SlackEventAdapter(os.environ.get("SLACK_EVENTS_TOKEN"), "
 # Initialize a Web API client
 slack_web_client = WebClient(token=os.environ.get("SLACK_TOKEN"))
 
-def flip_coin(channel):
-    """Craft the CoinBot, flip the coin and send the message to the channel
-    """
-    # Create a new CoinBot
-    coin_bot = CoinBot(channel)
+# Get the bot ID
+BOT_ID = slack_web_client.api_call("auth.test")['user_id']
 
-    # Get the onboarding message payload
-    message = coin_bot.get_message_payload()
-
-    # Post the onboarding message in Slack
-    slack_web_client.chat_postMessage(**message)
+def say(msg, channel_id):
+    """Print a message."""
+    msg = str(msg)
+    # message = {"type": "section", "text": {"type": "mrkdwn", "text": msg}}
+    slack_web_client.chat_postMessage(channel=channel_id, text=msg)
 
 
 # When a 'message' event is detected by the events adapter, forward that payload
 # to this function.
 @slack_events_adapter.on("message")
 def message(payload):
-    """Parse the message event, and if the activation string is in the text, 
-    simulate a coin flip and send the result.
+    """Parse the message event...
     """
+    event = payload.get("event", {}) # Get the event data from the payload
+    user_id = event.get('user')      # Get the user that the message came from
+    text = event.get("text")         # Get the text from the event that came through
+    
 
-    # Get the event data from the payload
-    event = payload.get("event", {})
+    # Make sure that user_id is not None and message is not from a bot
+    if user_id != None and BOT_ID != user_id: 
 
-    # Get the text from the event that came through
-    text = event.get("text")
-
-    # Check and see if the activation phrase was in the text of the message.
-    # If so, execute the code to flip a coin.
-    if "hey sammy, flip a coin" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-
-        # Execute the flip_coin function and send the results of
-        # flipping a coin to the channel
-        return flip_coin(channel_id)
-
+        channel_id = event.get('channel')
+        say("", channel_id)
+        #### Later on I want to set it up so that user can start, restart, and exit the game.
+        if text.lower() == "start adventure": # or text.lower() == "restart adventure":
+            return say(look(), channel_id)    
+        elif text.lower() == "test":
+            return say("Luke gets eaten by a dragon", channel_id)  
+        else:
+            res = handle_command(text)
+            if res is not None:
+                return say(res, channel_id) 
+                
 if __name__ == "__main__":
     # Create the logging object
     logger = logging.getLogger()
