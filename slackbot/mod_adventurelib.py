@@ -1,5 +1,3 @@
-import re
-# import sys
 import inspect
 import random
 from copy import deepcopy
@@ -583,19 +581,8 @@ def handle_command(cmd):
         if matches is not None:
             args.update(matches)
             return func(**args)
-            # break
     else:
         return no_command_matches(cmd)
-
-
-
-        # Ugly, but we want to keep the arguments consistent
-        # help = globals()['help']
-        # qmark = Pattern('help')
-        # qmark.prefix = ['?']
-        # qmark.orig_pattern = '?'
-        # commands.insert(0, (Pattern('help'), help, {}))
-        # commands.insert(0, (qmark, help, {}))
 
 
 commands = [

@@ -25,7 +25,7 @@ RUN source /root/.bashrc && nvm install 14.16.1
 RUN npm install -g localtunnel
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN pip install slackclient slackeventsapi Flask mysql-connector-python
+RUN pip install slackclient slack_bolt Flask mysql-connector-python
 RUN echo "alias python=python3" >> /root/.bashrc
 
 COPY slackbot /slackbot

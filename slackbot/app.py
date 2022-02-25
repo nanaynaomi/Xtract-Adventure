@@ -1,65 +1,40 @@
 import os
 import logging
-from flask import Flask
-from slack import WebClient
-from slackeventsapi import SlackEventAdapter
-# from coinbot import CoinBot
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_bolt.adapter.flask import SlackRequestHandler
 from mod_adventurelib import *
-from demo_game_test import *
+from game import *
 
-# Initialize a Flask app to host the events adapter
-app = Flask(__name__)
-# Create an events adapter and register it to an endpoint in the slack app for event injestion.
-slack_events_adapter = SlackEventAdapter(os.environ.get("SLACK_EVENTS_TOKEN"), "/slack/events", app)
+logging.basicConfig(level=logging.DEBUG)
+app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
-# Initialize a Web API client
-slack_web_client = WebClient(token=os.environ.get("SLACK_TOKEN"))
+@app.middleware # or app.use(log_request)
+def log_request(logger, body, next):
+    logger.debug(body)
+    return next()
 
-# Get the bot ID
-BOT_ID = slack_web_client.api_call("auth.test")['user_id']
+@app.event("message")
+def handle_message(message, say):
+    if message['text'].lower() == "start adventure":
+        say(look())
+    else:
+        res = handle_command(message['text'].lower())
+        if res is not None:
+            say(res)
 
-def say(msg, channel_id):
-    """Print a message."""
-    msg = str(msg)
-    # message = {"type": "section", "text": {"type": "mrkdwn", "text": msg}}
-    slack_web_client.chat_postMessage(channel=channel_id, text=msg)
+from flask import Flask, request
 
+flask_app = Flask(__name__)
+handler = SlackRequestHandler(app)
 
-# When a 'message' event is detected by the events adapter, forward that payload
-# to this function.
-@slack_events_adapter.on("message")
-def message(payload):
-    """Parse the message event...
-    """
-    event = payload.get("event", {}) # Get the event data from the payload
-    user_id = event.get('user')      # Get the user that the message came from
-    text = event.get("text")         # Get the text from the event that came through
-    
-
-    # Make sure that user_id is not None and message is not from a bot
-    if user_id != None and BOT_ID != user_id: 
-
-        channel_id = event.get('channel')
-        say("", channel_id)
-        #### Later on I want to set it up so that user can start, restart, and exit the game.
-        if text.lower() == "start adventure": # or text.lower() == "restart adventure":
-            return say(look(), channel_id)    
-        elif text.lower() == "test":
-            return say("Luke gets eaten by a dragon", channel_id)  
-        else:
-            res = handle_command(text)
-            if res is not None:
-                return say(res, channel_id) 
-                
+@flask_app.route("/slack/events", methods=["POST"])
+def slack_events():
+    return handler.handle(request)
+     
 if __name__ == "__main__":
-    # Create the logging object
-    logger = logging.getLogger()
 
-    # Set the log level to DEBUG. This will increase verbosity of logging messages
-    logger.setLevel(logging.DEBUG)
-
-    # Add the StreamHandler as a logging handler
-    logger.addHandler(logging.StreamHandler())
+    SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
 
     # Run our app on our externally facing IP address on port 3000 instead of
     # running it on localhost, which is traditional for development.
