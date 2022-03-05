@@ -9,6 +9,8 @@ __all__ = (
     'handle_command',
     'Room',
     'Item',
+    'FemaleCharacter',
+    'MaleCharacter',
     'Bag',
     'set_context',
     'get_context',
@@ -19,7 +21,7 @@ __all__ = (
 #:
 #: Commands will only be available if their context is "within" the currently
 #: active context, a functiondefined by '_match_context()`.
-current_context = None
+current_context = 'beginning'
 
 
 #: The separator that defines the context hierarchy
@@ -152,9 +154,7 @@ class Room:
 
     def exit(self, direction):
         """Get the exit of a room in a given direction.
-
         Return None if the room has no exit in a direction.
-
         """
         if direction not in self._directions:
             raise KeyError('%r is not a direction' % direction)
@@ -178,9 +178,15 @@ class Room:
         else:
             object.__setattr__(self, name, value)
 
-
 Room.add_direction('north', 'south')
 Room.add_direction('east', 'west')
+
+# Room.add_direction('lb', 'exit_lb') # LB - Luke and Byers cubicle area
+# Room.add_direction('dr', 'exit_dr') # DR - Demo room
+# Room.add_direction('cr', 'exit_cr') # CR - Conference room
+# Room.add_direction('zm', 'exit_zm') # ZM - Zoe and Madden's office
+# Room.add_direction('fd', 'exit_fd') # FD - Front door
+
 
 
 class Item:
@@ -201,6 +207,18 @@ class Item:
 
     def __str__(self):
         return self.name
+
+# Subclass of Item class
+class MaleCharacter(Item):
+    subject_pronoun = 'he'
+    object_pronoun = 'him'
+    person = True
+
+class FemaleCharacter(Item):
+    subject_pronoun = 'she'
+    object_pronoun = 'her'
+    person = True
+
 
 
 class Bag(set):
@@ -542,11 +560,24 @@ def when(command, context=None, **kwargs):
 
 
 def help():
-    """Print a list of the commands you can give."""
-    msg = 'Here is a list of the commands you can give:'
-    cmds = sorted(c.orig_pattern for c, _, _ in commands if c.is_active())
+    # """Print a list of the commands you can give."""
+    # msg = 'Here is a list of the commands you can give:'
+    # cmds = sorted(c.orig_pattern for c, _, _ in commands if c.is_active())
+    # for c in cmds:
+    #     msg += '\n' + c
+    # return msg
+    msg = "Guide to some of the main commands: (NOT case sensitive)"
+    cmds = [
+        "open/close THING - Example: 'open fridge'",
+        "take/drop ITEM - Example: 'take mug'",
+        "give/feed RECIPIENT the THING - Example: 'feed Byers the burrito'",
+        "inventory - View the items you currently have",
+        "where can I go - See which rooms/areas you can currently access",
+        "talk to PERSON - Example: 'talk to byers'"
+    ]
     for c in cmds:
-        msg += '\n' + c
+        msg += (f"\n{c}")
+    msg += (f"\n (Note: there are other commands besides these that you can try)")
     return msg
 
 
