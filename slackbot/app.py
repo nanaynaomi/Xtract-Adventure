@@ -16,7 +16,9 @@ def log_request(logger, body, next):
 
 @app.event("message")
 def handle_message(message, say):
-    if (message['text'].lower() == "start adventure" and get_context() == 'beginning') or get_context() != 'beginning':
+    if get_context() == 'game_over':
+        say("GAME OVER")
+    elif (message['text'].lower() == "start adventure" and get_context() == 'beginning') or get_context() != 'beginning':
         res = handle_command(message['text'].lower())
         if res is not None:
             say(res)

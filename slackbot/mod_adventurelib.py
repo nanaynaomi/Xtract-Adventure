@@ -11,9 +11,12 @@ __all__ = (
     'Item',
     'FemaleCharacter',
     'MaleCharacter',
+    'NonSpecificCharacter',
     'Bag',
     'set_context',
     'get_context',
+    'set_event_level',
+    'get_event_level'
 )
 
 
@@ -22,10 +25,23 @@ __all__ = (
 #: Commands will only be available if their context is "within" the currently
 #: active context, a functiondefined by '_match_context()`.
 current_context = 'beginning'
-
+current_event_level = 0
 
 #: The separator that defines the context hierarchy
 CONTEXT_SEP = '.'
+
+
+def set_event_level(event):
+    """Set which event/level/stage we are at.
+    Events go from 0 to 6.
+    """
+    global current_event_level
+    if 0 <= event <= 6 and event >= current_event_level:
+        current_event_level = event
+
+def get_event_level():
+    """Get the current event level AKA the most recent event that occurred."""
+    return current_event_level
 
 
 def set_context(new_context):
@@ -122,24 +138,24 @@ class Placeholder:
 class Room:
     """A generic room object that can be used by game code."""
 
-    _directions = {}
+    # _directions = {}
 
-    @staticmethod
-    def add_direction(forward, reverse):
-        """Add a direction."""
-        for dir in (forward, reverse):
-            if not dir.islower():
-                raise InvalidCommand(
-                    'Invalid direction %r: directions must be all lowercase.'
-                )
-            if dir in Room._directions:
-                raise KeyError('%r is already a direction!' % dir)
-        Room._directions[forward] = reverse
-        Room._directions[reverse] = forward
+    # @staticmethod
+    # def add_direction(forward, reverse):
+    #     """Add a direction."""
+    #     for dir in (forward, reverse):
+    #         if not dir.islower():
+    #             raise InvalidCommand(
+    #                 'Invalid direction %r: directions must be all lowercase.'
+    #             )
+    #         if dir in Room._directions:
+    #             raise KeyError('%r is already a direction!' % dir)
+    #     Room._directions[forward] = reverse
+    #     Room._directions[reverse] = forward
 
-        # Set class attributes to None to act as defaults
-        setattr(Room, forward, None)
-        setattr(Room, reverse, None)
+    #     # Set class attributes to None to act as defaults
+    #     setattr(Room, forward, None)
+    #     setattr(Room, reverse, None)
 
     def __init__(self, description):
         self.description = description.strip()
@@ -152,34 +168,35 @@ class Room:
     def __str__(self):
         return self.description
 
-    def exit(self, direction):
-        """Get the exit of a room in a given direction.
-        Return None if the room has no exit in a direction.
-        """
-        if direction not in self._directions:
-            raise KeyError('%r is not a direction' % direction)
-        return getattr(self, direction, None)
+    # def exit(self, direction):
+    #     """Get the exit of a room in a given direction.
+    #     Return None if the room has no exit in a direction.
+    #     """
+    #     if direction not in self._directions:
+    #         raise KeyError('%r is not a direction' % direction)
+    #     return getattr(self, direction, None)
 
-    def exits(self):
-        """Get a list of directions to exit the room."""
-        return sorted(d for d in self._directions if getattr(self, d))
+    # def exits(self):
+    #     """Get a list of directions to exit the room."""
+    #     return sorted(d for d in self._directions if getattr(self, d))
 
     def __setattr__(self, name, value):
-        if isinstance(value, Room):
-            if name not in self._directions:
-                raise InvalidDirection(
-                    '%r is not a direction you have declared.\n\n' +
-                    'Try calling Room.add_direction(%r, <opposite>) ' % name +
-                    ' where <opposite> is the return direction.'
-                )
-            reverse = self._directions[name]
-            object.__setattr__(self, name, value)
-            object.__setattr__(value, reverse, self)
-        else:
-            object.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
+        # if isinstance(value, Room):
+        #     if name not in self._directions:
+        #         raise InvalidDirection(
+        #             '%r is not a direction you have declared.\n\n' +
+        #             'Try calling Room.add_direction(%r, <opposite>) ' % name +
+        #             ' where <opposite> is the return direction.'
+        #         )
+        #     reverse = self._directions[name]
+        #     object.__setattr__(self, name, value)
+        #     object.__setattr__(value, reverse, self)
+        # else:
+        #     object.__setattr__(self, name, value)
 
-Room.add_direction('north', 'south')
-Room.add_direction('east', 'west')
+# Room.add_direction('north', 'south')
+# Room.add_direction('east', 'west')
 
 # Room.add_direction('lb', 'exit_lb') # LB - Luke and Byers cubicle area
 # Room.add_direction('dr', 'exit_dr') # DR - Demo room
@@ -212,12 +229,14 @@ class Item:
 class MaleCharacter(Item):
     subject_pronoun = 'he'
     object_pronoun = 'him'
-    person = True
 
 class FemaleCharacter(Item):
     subject_pronoun = 'she'
     object_pronoun = 'her'
-    person = True
+
+class NonSpecificCharacter(Item):
+    subject_pronoun = 'they'
+    object_pronoun = 'their'
 
 
 
@@ -573,11 +592,12 @@ def help():
         "give/feed RECIPIENT the THING - Example: 'feed Byers the burrito'",
         "inventory - View the items you currently have",
         "where can I go - See which rooms/areas you can currently access",
-        "talk to PERSON - Example: 'talk to byers'"
+        "talk to PERSON - You can talk to anyone in the room. Example: 'talk to byers'",
+        "look at THING / interact with THING - Example: 'look at Furby'",
     ]
     for c in cmds:
         msg += (f"\n{c}")
-    msg += (f"\n (Note: there are other commands besides these that you can try)")
+    msg += (f"\n (Note: there are many other commands besides these that you can try)")
     return msg
 
 
