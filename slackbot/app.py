@@ -6,13 +6,13 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from mod_adventurelib import *
 from game import *
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
-@app.middleware # or app.use(log_request)
-def log_request(logger, body, next):
-    logger.debug(body)
-    return next()
+# @app.middleware # or app.use(log_request)
+# def log_request(logger, body, next):
+#     logger.debug(body)
+#     return next()
 
 @app.event("message")
 def handle_message(message, say):

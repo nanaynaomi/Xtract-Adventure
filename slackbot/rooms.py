@@ -116,7 +116,7 @@ Open laptop
 laptop = Room("""
 You are on the desktop. There are two shortcuts. What will you open?
 GitHub
-Slacks
+Slack
 """)
 
 slack = Room("""
