@@ -90,7 +90,6 @@ Zoë is at her desk, but Madden isn't here.
 
 # PDX airport and car ------
 
-# Fun idea: If they type 'steal a car' or 'hotwire a car' or 'steal Luke's car', it will let them, and then put them in the car Room.
 car = Room("""
 You find yourself driving on 217... Where will you go?
 XHQ - Xtract HQ
@@ -99,16 +98,25 @@ PDX - Portland International Airport
 """)
 
 pdx_airport = Room("""
-[description of pdx airport here...] Do you wanna get on plane? Where you wanna go?
+You are at the Portland International Airport (PDX). Where will you go?
+Car - Leave airport and go to your car
+TS - Tradeshow
+Open laptop
 """)
+pdx_airport.after_event = """
+You are at the Portland International Airport (PDX). Where will you go?
+Car - Leave airport and go to your car
+TS - Tradeshow
+WY - Weyland-Yutani Clinic
+Open laptop
+"""
 
-
-# Laptop Rooms ------
+# Laptop "Rooms" ------
 
 laptop = Room("""
 You are on the desktop. There are two shortcuts. What will you open?
 GitHub
-Slack
+Slacks
 """)
 
 slack = Room("""
@@ -116,7 +124,7 @@ You have 7 notifications. Users Madden, Martin, and Zoe are online.
 """)
 
 github = Room("""
-You are in an Xtract Solutions GitHub Repository, on the "Issues" page. If someone suggested a feature to you, perhaps you should create a new issue about it. 
+You are in an Xtract Solutions GitHub Repository, on the "Issues" page. If someone suggested a feature to you, perhaps you should *create a new issue* about it. 
 Maybe this new feature could even help you make a sale!
 """)
 
@@ -142,8 +150,11 @@ Everyone is so happy because Summit is working and everything is amazing. The do
 """
 
 wy_server_room = Room("""
-An IT guy is here, watching you.
+An IT guy is here, watching you. There is a terminal here.
 """)
+wy_server_room.after_event = """
+The IT guy is still lurking around, but the server is all good now!
+"""
 
 wy_injection_area = Room("""
 Stephanie is training several injection nurses on how to use Summit but nothing is working.
@@ -157,39 +168,43 @@ bc_lobby = Room("""
 You are standing in a large open lobby filled with chairs.
 There is a Microsoft surface sitting on the front desk.
 """)
+
 bc_injection_area = Room("""
 There is a computer being used by a nurse who is giving a patient their allergy injections.
 """)
+
 bc_mixing_area = Room("""
 There is a refrigerator.
 There is a desk with a nurse sitting at it who is mixing vials.
 There is an Automated Mixing Assistant in the corner.
 """)
+
 bc_front_desk = Room("""
 This is the front desk office area. Nothing much to do in here...
 """)
+
 
 # Trade Show ------
 ts_main_area = Room("""
 You enter a large convention hall with rows and rows of booths. Among them you notice booths representing Xtract Solutions, Cerner, and Rosch
 """)
+
 xtract_booth = Room("""
 This booth is very active!  
 To the left you see James entertaining a group of prospective clients.
 To the right you see madden and scott talking.
-Ahead you see a large poster with a circular graphic with the words "Test > Prescribe > Mix > Outsource > Inject > Comply" and table with Xtract Solutions branded conference goodies. There are several potential clients standing around it that you could talk to...
+Ahead you see a large poster with a circular graphic with the words "Test > Prescribe > Mix > Outsource > Inject > Comply" and table with Xtract Solutions branded conference goodies. You spot a *potential client* standing by it that you could talk to...
 """)
-# xb_scott_madden = Room("""
-# """)
-# xb__
 
 rosch_booth = Room("""
 There is no one here, just an empty booth with an antiquated computer covered in a thick layer of dust...
 """)
+
 cerner_booth = Room("""
 This booth is unlike all the others... the floors are marble and there are giant crystal chandeliers hanging from the ceilings. Men in black tuxedos and women in stunning ballgowns are mingling.
 There is a huge banquet table with free champagne and shrimp cocktails.
 """)
+
 
 # Room attributes: ----------------------------------------------------------
 Room.is_laptop_room = False
@@ -197,11 +212,7 @@ laptop.is_laptop_room = True
 github.is_laptop_room = True
 slack.is_laptop_room = True
 
-# Room.list_people = True
-# luke_byers_cubicle_area.list_people = False
-# xtract_booth.list_people = False
-
-# rooms where a sale can be made.
+# Rooms where a sale can be made:
 Room.can_make_sale_here = False
 demo_room.can_make_sale_here = True
 xtract_booth.can_make_sale_here = True
@@ -210,19 +221,13 @@ sale_rooms = {
     xtract_booth: "at Xtract's booth at the tradeshow"
 }
 
+# Rooms that change on event 6:
 Room.change_on_6 = False
 wy_lobby.change_on_6 = True
 wy_back_office_area.change_on_6 = True
 wy_server_room.change_on_6 = True
 wy_injection_area.change_on_6 = True
 
-
-
-# Connections: (I might as well add connections/directions just to be safe right? Worry about this LATER though...)
-# starting_room.north = forest
-# forest.north = forest_edge
-
-# MAKE A NESTED DICTIONARY??
 
 # Room connections: ---------------------------------------------------------
 room_connections = {
@@ -235,7 +240,7 @@ room_connections = {
 
     car : [shared_office_area, bc_lobby, pdx_airport],
 
-    pdx_airport : [wy_lobby, ts_main_area, laptop], # wy_lobby should only be accessible after successful demo or tradeshow
+    pdx_airport : [car, ts_main_area, laptop], # add wy_lobby after successful demo or tradeshow (event 5)
 
     laptop : [slack, github], # laptop can also access or be accessed from whatever room you are currently in...
     slack : [laptop],
@@ -251,7 +256,7 @@ room_connections = {
     bc_mixing_area : [bc_injection_area, bc_front_desk, laptop],
     bc_front_desk : [bc_mixing_area, laptop],
 
-    ts_main_area : [xtract_booth, rosch_booth, cerner_booth, laptop],
+    ts_main_area : [pdx_airport, xtract_booth, rosch_booth, cerner_booth, laptop],
     xtract_booth : [ts_main_area, laptop],
     rosch_booth : [ts_main_area, laptop],
     cerner_booth : [ts_main_area, laptop]
@@ -267,6 +272,7 @@ room_guide = {
     zoe_madden_office : "ZM - Zoë and Madden's office",
 
     car : "Car - Leave current building and go to your car",
+    pdx_airport : "PDX - Portland International Airport",
 
     laptop : "Open laptop", # laptop can also access or be accessed from whatever room you are currently in...
     slack : "Open Slack",
@@ -297,6 +303,8 @@ car_pdx_room_guide = {
 
     # 'drive to' if current_room is car,  'fly back to' if current_room is (wy_lobby or ts_main_area)
     pdx_airport : "PDX - Portland International Airport",
+    car : "Car - Leave airport and go to your car",
+    laptop: "Open laptop",
 
     # 'fly to' if current_room is pdx_airport
     wy_lobby : "WY - Weyland-Yutani Clinic",
@@ -306,4 +314,4 @@ car_pdx_room_guide = {
 
 # Initialize current room: ----
 current_room = shared_office_area
-previous_room = current_room
+previous_room = shared_office_area

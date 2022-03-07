@@ -23,7 +23,7 @@ __all__ = (
 #: The current context.
 #:
 #: Commands will only be available if their context is "within" the currently
-#: active context, a functiondefined by '_match_context()`.
+#: active context, a function defined by '_match_context()`.
 current_context = 'beginning'
 current_event_level = 0
 
@@ -138,25 +138,6 @@ class Placeholder:
 class Room:
     """A generic room object that can be used by game code."""
 
-    # _directions = {}
-
-    # @staticmethod
-    # def add_direction(forward, reverse):
-    #     """Add a direction."""
-    #     for dir in (forward, reverse):
-    #         if not dir.islower():
-    #             raise InvalidCommand(
-    #                 'Invalid direction %r: directions must be all lowercase.'
-    #             )
-    #         if dir in Room._directions:
-    #             raise KeyError('%r is already a direction!' % dir)
-    #     Room._directions[forward] = reverse
-    #     Room._directions[reverse] = forward
-
-    #     # Set class attributes to None to act as defaults
-    #     setattr(Room, forward, None)
-    #     setattr(Room, reverse, None)
-
     def __init__(self, description):
         self.description = description.strip()
 
@@ -168,41 +149,8 @@ class Room:
     def __str__(self):
         return self.description
 
-    # def exit(self, direction):
-    #     """Get the exit of a room in a given direction.
-    #     Return None if the room has no exit in a direction.
-    #     """
-    #     if direction not in self._directions:
-    #         raise KeyError('%r is not a direction' % direction)
-    #     return getattr(self, direction, None)
-
-    # def exits(self):
-    #     """Get a list of directions to exit the room."""
-    #     return sorted(d for d in self._directions if getattr(self, d))
-
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
-        # if isinstance(value, Room):
-        #     if name not in self._directions:
-        #         raise InvalidDirection(
-        #             '%r is not a direction you have declared.\n\n' +
-        #             'Try calling Room.add_direction(%r, <opposite>) ' % name +
-        #             ' where <opposite> is the return direction.'
-        #         )
-        #     reverse = self._directions[name]
-        #     object.__setattr__(self, name, value)
-        #     object.__setattr__(value, reverse, self)
-        # else:
-        #     object.__setattr__(self, name, value)
-
-# Room.add_direction('north', 'south')
-# Room.add_direction('east', 'west')
-
-# Room.add_direction('lb', 'exit_lb') # LB - Luke and Byers cubicle area
-# Room.add_direction('dr', 'exit_dr') # DR - Demo room
-# Room.add_direction('cr', 'exit_cr') # CR - Conference room
-# Room.add_direction('zm', 'exit_zm') # ZM - Zoe and Madden's office
-# Room.add_direction('fd', 'exit_fd') # FD - Front door
 
 
 
@@ -235,7 +183,7 @@ class FemaleCharacter(Item):
     object_pronoun = 'her'
 
 class NonSpecificCharacter(Item):
-    subject_pronoun = 'they'
+    subject_pronoun = 'this person'
     object_pronoun = 'their'
 
 
@@ -579,21 +527,17 @@ def when(command, context=None, **kwargs):
 
 
 def help():
-    # """Print a list of the commands you can give."""
-    # msg = 'Here is a list of the commands you can give:'
-    # cmds = sorted(c.orig_pattern for c, _, _ in commands if c.is_active())
-    # for c in cmds:
-    #     msg += '\n' + c
-    # return msg
+    """Print a list of the commands you can give."""
     msg = "Guide to some of the main commands: (NOT case sensitive)"
     cmds = [
         "open/close THING - Example: 'open fridge'",
         "take/drop ITEM - Example: 'take mug'",
         "give/feed RECIPIENT the THING - Example: 'feed Byers the burrito'",
         "inventory - View the items you currently have",
+        "look - Look around the current room/location",
         "where can I go - See which rooms/areas you can currently access",
         "talk to PERSON - You can talk to anyone in the room. Example: 'talk to byers'",
-        "look at THING / interact with THING - Example: 'look at Furby'",
+        "look at THING / interact with THING - Example: 'look at Furby'"
     ]
     for c in cmds:
         msg += (f"\n{c}")
@@ -638,5 +582,4 @@ def handle_command(cmd):
 
 commands = [
     (Pattern('help'), help, {}),
-    # (Pattern('quit'), sys.exit, {}),  # quit command is built-in
 ]

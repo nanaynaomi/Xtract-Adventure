@@ -3,13 +3,13 @@ from commands import look
 
 @when('start adventure', context='beginning')
 def start_adventure():
-    set_context('xtract_hq.p1') # change name of context later
+    set_context(None)
     msg = ("Welcome to XAS (Xtract Adventure System)!\n"
         "Helpful commands: (Note - commands are NOT case sensitive)\n"
         "   'where can I go' - where you can go and what to type\n"
         "   'help' -  general assistance and explanation of commands\n"
         "Let's begin!\n"
-        "\n" # ADD MORE OF A DESCRIPTION HERE LATER??
+        "\n"
         "\n"
         "You enter Xtract HQ. Luke has everyone gathered for an all hands meeting in the main room. "
         "As soon as you walk in, Luke calls you up to the front, and you approach with caution. "
