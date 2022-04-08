@@ -52,6 +52,10 @@ def go_to(room, e_key):
     elif e_key == 'ws' and current_room == shared_office_area:
         msg = ("It\'s a dark, scary place. You are likely to be eaten by a grue.\n"
         "You turn back in fear and do not enter the room")
+    elif e_key == 'open_fridge' and current_room == bc_mixing_area:
+        return interact('open', 'fridge')
+    elif e_key == 'bcf' and current_room == bc_lobby:
+        msg = "You can't climb over the desk."
     else:
         msg = "You cannot access that from where you currently are."
     return msg
@@ -185,6 +189,8 @@ def take(item):
         msg = "You cannot pick up items while using laptop."
     elif item == 'mug' and current_room == conference_room:
         msg = "Hmm... instant oatmeal... Steve has been here. You leave the mug on the table."
+    elif item in ['needle', 'injection needle', 'syringe'] and current_room == wy_injection_area:
+        msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
     else: 
         obj = current_room.items.take(item)
         if obj:
@@ -192,9 +198,11 @@ def take(item):
             msg = f"You pick up the {obj}."
         else:
             if item == 'furby' and current_room == shared_office_area:
-                msg = "You cannot take that."
+                msg = "You cannot take the furby. It does not want to go with you."
             elif byers_items.find(item):
                 msg = "You'll have to ask Byers for that..."
+            elif item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy'] and current_room == xtract_booth:
+                msg = "You should leave those for the customers... Maybe when the conference is over you can steal some..."
             else:
                 msg = f"There is no {item} here."
     return msg
@@ -292,75 +300,88 @@ def take_item_from_byers(item):
         msg = "You can't do that."
     return msg
 
-
+@when('talk to a PERSON') # ex: "talk to a patient"
 @when('talk to PERSON')
 def talk(person):
     if person in ['perspective client','client']:
         person = 'potential client'
+    elif person == 'patients':
+        person = 'patient'
     character = characters.find(person)
     if not character:
-        msg = ("You can only talk to other humans.")
+        return "You can only talk to other humans."
     elif not current_room.people.find(person):
-        msg = (f"{person} cannot hear you.")
-    else:
-        msg = (f"{character.subject_pronoun} is busy right now.") # default message just in case.
-        level = get_event_level()
-        if character == andrew:
-            msg = "Andrew: \"No.\""
-        elif character == byers:
-            msg = ""
-            if level == 0:
-                msg = "Byers mutters something about being too hungry to think..."
-            elif level == 5:
-                msg = "Byers mentions that he cannot contact your customers server. "
-            if (level >= 1) and byers_items:
-                msg += "He asks if you need anything."
-                for i in byers_items:
-                    msg += (f" A {i}?")
-        elif character == graham:
-            msg = ("Graham is on the phone with a customer who is furious that Summit isn't working."
-                " He is politely asking them to try turning on their computer and they are insisting the"
-                " software should do it for them.")
-        elif character == james and current_room == xtract_booth:
-            msg = ("You hear James making his pitch... \"pain funnel... 3rd party story... pain funnel...\" then you hear James ask,"
-                " \"So what's stopping you from signing today?\" to which the potential customer responds:"
-                " \"Well... our reports absolutely must have red lines with transparent ink and I don't see where Summit supports that.\""
-                " You think to yourself, that sounds like an absolutely horrible idea.") # put in italics later...?
-            if level == 2:
-                set_event_level(3)
-        elif character == nurse:
-            if current_room == bc_injection_area:
-                msg = "Nurse: \"I have a suggestion: Could you have Summit show more information in a smaller space?\""
-            elif current_room == bc_mixing_area:
-                msg = "Nurse: \"Hey, you should add cat videos to Summit. That would be really useful I think.\""
-            if level == 2:
-                set_event_level(3)
-        elif character == potential_client:
-            msg = "You start chatting with the potential client."
-            # if they can still make a sale here:
-            if current_room.can_make_sale_here:
-                msg += (" At some point, you have the opportunity to make a sale.\n"
-                    "Do you want to try making the sale? (yes or no)")
-                set_context('sale_prompt')
-            else:
-                msg += " After a few minutes of this, they randomly walk away without saying anything. You notice that their pockets are full of the free beer cozies..."
-        elif character == wei:
-            if level <= 1:
-                msg = "Wei: \"You should talk to Byers if you need a computer.\""
-            else: 
-                msg = "She finds 3 new bugs in your code and assigns the issues back to you."
-        elif character == luke:
-            msg = "Luke is busy talking on the phone."
-        elif character == zoe:
-            if level >= 5:
-                msg = "She is busy working on the security questionnaire for the new customer. She mentions something about being on question 3 of 2739."
-            else:
-                msg = "She tells you that we need a new customer."
+        return f"{person} cannot hear you."
+    
+    msg = (f"They are busy right now.") # default message just in case.
+    level = get_event_level()
+    if character == andrew:
+        msg = "Andrew: \"No.\""
+    elif character == byers:
+        msg = ""
+        if level == 0:
+            msg = "Byers mutters something about being too hungry to think..."
+        elif level == 5:
+            msg = "Byers mentions that he cannot contact your customers server. "
+        if (level >= 1) and byers_items:
+            msg += "He asks if you need anything."
+            for i in byers_items:
+                msg += (f" A {i}?")
+    elif character == graham:
+        msg = ("Graham is on the phone with a customer who is furious that Summit isn't working."
+            " He is politely asking them to try turning on their computer and they are insisting the"
+            " software should do it for them.")
+    elif character == it_guy:
+        msg = "He continues to stare at you."
+    elif character == james and current_room == xtract_booth:
+        msg = ("You hear James making his pitch... \"pain funnel... 3rd party story... pain funnel...\" then you hear James ask,"
+            " \"So what's stopping you from signing today?\" to which the potential customer responds:"
+            " \"Well... our reports absolutely must have red lines with transparent ink and I don't see where Summit supports that.\""
+            " You think to yourself, that sounds like an absolutely horrible idea.") # put in italics later...?
+        if level == 2:
+            set_event_level(3)
+    elif character == luke:
+        msg = "Luke is busy talking on the phone."
+    elif character == nurse:
+        if current_room == bc_injection_area:
+            msg = "Nurse: \"I have a suggestion: Could you have Summit show more information in a smaller space?\""
+        elif current_room == bc_mixing_area:
+            msg = "Nurse: \"Hey, you should add cat videos to Summit. That would be really useful I think.\""
+        if level == 2:
+            set_event_level(3)
+    elif character == patient:
+        if current_room == bc_injection_area:
+            msg = "ASK ANDREW FOR FUNNY MESSAGE" # ask andrew
+        elif current_room == bc_lobby:
+            msg = "ASK ANDREW FOR FUNNY MESSAGE" # ask andrew
+        elif current_room == wy_lobby:
+            msg = "ASK ANDREW FOR FUNNY MESSAGE" # ask andrew
+    elif character == potential_client:
+        msg = "You start chatting with the potential client."
+        # if they can still make a sale here:
+        if current_room.can_make_sale_here:
+            msg += (" At some point, you have the opportunity to make a sale.\n"
+                "Do you want to try making the sale? (yes or no)")
+            set_context('sale_prompt')
+        else:
+            msg += " After a few minutes of this, they randomly walk away without saying anything. You notice that their pockets are full of the free beer cozies..."
+    elif character == wei:
+        if level <= 1:
+            msg = "Wei: \"You should talk to Byers if you need a computer.\""
+        else: 
+            msg = "She finds 3 new bugs in your code and assigns the issues back to you."
+    elif character == zoe:
+        if level >= 5:
+            msg = "She is busy working on the security questionnaire for the new customer. She mentions something about being on question 3 of 2739."
+        else:
+            msg = "She tells you that we need a new customer."
     return msg
 
 
-# INTERACTIONS
-@when('install THING', action='install')
+# INTERACTIONS WITH THINGS IN ROOM
+@when('install teamviewer', action='install', thing='')
+@when('install teamviewer on computer', action='install', thing='')
+@when('install teamviewer on terminal', action='install', thing='')
 @when('join the call', action='join call', thing='')
 @when('join call', action='join call', thing='')
 @when('erase whiteboard', action='erase board', thing='')
@@ -372,45 +393,69 @@ def talk(person):
 def interact(action, thing):
     if characters.find(thing): # if thing is person
         return talk(thing)
-    else:
-        msg = 'You cannot do that. Try phrasing it differently...' # default message for now...
-        if current_room == shared_office_area:
-            if thing == 'furby':
-                msg = "The furby stares deep into your soul."
-        elif current_room == zoe_madden_office:
-            if thing in ["madden's desk", "madden desk", "maddens desk"]:
-                msg = "It looks like it has been vacant for a long time. You silently shed a tear."
-        elif current_room == conference_room:
-            if thing == 'tv' and (action == 'turn on' or action == 'interact'):
-                msg = "You attempt to use the TV, but can't find the right input and eventually give up."
-            elif action == 'erase board':
-                msg = "You attempt to erase the stuff on the board, but it has been there too long and cannot be erased."
-            elif action == 'write on board':
-                msg = "You try to write on the board but the markers are all too dry."
-            elif thing == 'whiteboard':
-                msg = "There are markers and erasers here. Perhaps you could try to write on it or erase the random scribbles."
-        elif current_room == demo_room:
-            if action == 'join call':
-                msg = "You find yourself on a call with Luke, Scott, James, and several customers."
-                # if they can still make a sale here:
-                if current_room.can_make_sale_here:
-                    msg += (" At some point in the call, you have the opportunity to make a sale.\n"
-                        "Do you want to try making the sale? (yes or no)")
-                    set_context('sale_prompt')
-                else:
-                    msg += " After some time, the call ends. It was uneventful."
-        elif current_room == xtract_booth:
-            if thing in ['table', 'conference goodies', 'the table']:
-                msg = "you see an abundance of Xtract Solutions branded beer cozies and honey stingers strewn across the table."
-            elif thing == "poster":
-                msg = "this is a nice poster."
-        elif current_room == wy_server_room:
-            if action == 'install' and thing in ['teamviewer', 'teamviewer on computer', 'teamviewer on terminal']:
-                msg = "You notice Byers login... Suddenly everything begins working... Summit is up!"
-                set_event_level(6)
-            if thing in ['terminal', 'computer', 'the terminal']:
-                msg = "You note the absence of teamviewer... Perhaps if you installed it, Byers could help..."
+    msg = 'You cannot do that. Try phrasing it differently...' # default message for now...
+    level = get_event_level()
+    if current_room == shared_office_area:
+        if thing == 'furby':
+            msg = "The furby stares deep into your soul."
+    elif current_room == zoe_madden_office:
+        if thing in ["madden's desk", "madden desk", "maddens desk"]:
+            msg = "It looks like it has been vacant for a long time. You silently shed a tear."
+    elif current_room == conference_room:
+        if thing == 'tv' and (action == 'turn on' or action == 'interact'):
+            msg = "You attempt to use the TV, but can't find the right input and eventually give up."
+        elif action == 'erase board':
+            msg = "You attempt to erase the stuff on the board, but it has been there too long and cannot be erased."
+        elif action == 'write on board':
+            msg = "You try to write on the board but the markers are all too dry."
+        elif thing == 'whiteboard': 
+            msg = "There are markers and erasers here. Perhaps you could try to write on it or erase the random scribbles."
+    elif current_room == demo_room:
+        if action == 'join call':
+            msg = "You find yourself on a call with Luke, Scott, James, and several customers."
+            # if they can still make a sale here:
+            if current_room.can_make_sale_here:
+                msg += (" At some point in the call, you have the opportunity to make a sale.\n"
+                    "Do you want to try making the sale? (yes or no)")
+                set_context('sale_prompt')
+            else:
+                msg += " After some time, the call ends. It was uneventful."
+    elif current_room == rosch_booth:
+        if thing in ['computer', 'antiquated']:
+            msg = ("You hear a low hum that ets louder and louder. It quickly turns into clunking as"
+                " smoke begins to pour out of the side of the machine. You quickly turn off the computer and back away.")
+    elif current_room == xtract_booth:
+        if thing in ['table', 'conference goodies', 'the table']:
+            msg = "you see an abundance of Xtract Solutions branded beer cozies and honey stingers strewn across the table."
+        elif thing == "poster":
+            msg = "this is a nice poster."
+    elif current_room == bc_lobby and thing in ['microsoft surface', 'surface', 'microsoft surface' 'ms surface']:
+        msg = "Nothing happens. You see the power cord hanging from the back..."
+    elif current_room == bc_injection_area:
+        if thing == 'computer':
+            msg = "You are scolded for poor HIPAA practices."
+        elif thing in ['needle', 'injection needle', 'syringe']:
+            msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
+    elif current_room == bc_mixing_area:
+        if thing in ['fridge', 'refrigerator']:
+            msg = "You open the fridge and see that it is full of patient vials."
+        elif thing in ['automated mixing assistant', 'ama']:
+            msg = "Be careful, these are no longer supported... If you break it, you buy it!"
+    elif current_room == wy_lobby:
+        if thing in ['microsoft surface login kiosk', 'microsoft surface', 'login kiosk', 'kiosk']:
+            msg = "The screen says: 404 not found" if level < 6 else "The login kiosk is so popular! You notice that everyone has a smile on their face after using it."
+    elif current_room == wy_injection_area:
+        if thing in ['summit', 'computer']:
+            msg = "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
+    elif current_room == wy_server_room:
+        if action == 'install' and level < 6:
+            msg = "You notice Byers login... Suddenly everything begins working... Summit is up! (The IT guy gives you a hug)"
+            set_event_level(6)
+        if thing in ['terminal', 'computer', 'the terminal']:
+            msg = ("You note the absence of teamviewer... Perhaps if you *install teamviewer*, Byers could help..."
+                "\nThe IT guy is currently peeking over your shoulder.") if level < 6 else "They don't want you using this now."
     return msg
+
 
 
 @when('yes', context='sale_prompt', action='yes')

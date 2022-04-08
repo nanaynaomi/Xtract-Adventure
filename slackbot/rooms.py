@@ -150,7 +150,8 @@ Everyone is so happy because Summit is working and everything is amazing. The do
 """
 
 wy_server_room = Room("""
-An IT guy is here, watching you. There is a terminal here.
+An IT guy is here, watching you. He follows you wherever you move and stays close to you at all times.
+There is a terminal here.
 """)
 wy_server_room.after_event = """
 The IT guy is still lurking around, but the server is all good now!
