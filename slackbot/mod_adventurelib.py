@@ -9,9 +9,7 @@ __all__ = (
     'handle_command',
     'Room',
     'Item',
-    'FemaleCharacter',
-    'MaleCharacter',
-    'NonSpecificCharacter',
+    'Character',
     'Bag',
     'set_context',
     'get_context',
@@ -31,12 +29,13 @@ current_event_level = 0
 CONTEXT_SEP = '.'
 
 
-def set_event_level(event):
+
+def set_event_level(event): 
     """Set which event/level/stage we are at.
-    Events go from 0 to 6.
+    Events go from 0 to 7.
     """
     global current_event_level
-    if 0 <= event <= 6 and event >= current_event_level:
+    if 0 <= event <= 7 and event >= current_event_level:
         current_event_level = event
 
 def get_event_level():
@@ -44,7 +43,7 @@ def get_event_level():
     return current_event_level
 
 
-def set_context(new_context):
+def set_context(new_context):  
     """Set current context.
 
     Set the context to `None` to clear the context.
@@ -163,6 +162,7 @@ class Item:
             label.lower()
             for label in (name,) + aliases
         )
+        
 
     def __repr__(self):
         return '%s(%s)' % (
@@ -173,18 +173,40 @@ class Item:
     def __str__(self):
         return self.name
 
+
 # Subclass of Item class
-class MaleCharacter(Item):
-    subject_pronoun = 'he'
-    object_pronoun = 'him'
+class Character(Item):
+    """A character in the game that the player can interact with"""
+    def __init__(self, name, *aliases):
+        super().__init__(name, *aliases)
+        self._messages = {}
 
-class FemaleCharacter(Item):
-    subject_pronoun = 'she'
-    object_pronoun = 'her'
+    def get_msg(self, room, level):
+        if room not in self._messages:
+            return "They have nothing to say." # error message
+        return self._messages[room][level]
 
-class NonSpecificCharacter(Item):
-    subject_pronoun = 'this person'
-    object_pronoun = 'their'
+    def set_msg(self, room, levels, message): # where levels is a list
+        if room not in self._messages:
+            self._messages[room] = {lvl:"" for lvl in range(8)}
+        for level in levels:
+            self._messages[room][level] = message
+
+
+
+# class LevelMessages:
+#     """ """
+#     def __init__(self):
+#         self._messages = {}
+
+#     def get_msg(self, level):
+#         return self._messages[level]
+    
+#     def set_msg(self, levels, message):
+#         for level in levels:
+#             self._messages[level] = message
+
+
 
 
 

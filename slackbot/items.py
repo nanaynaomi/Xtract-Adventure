@@ -3,31 +3,7 @@ from rooms import *
 
 # Configure bags: ------
 Room.items = Bag()
-Room.people = Bag()
 inventory = Bag()
-
-# Characters: ------
-andrew = MaleCharacter('andrew')
-byers = MaleCharacter('byers')
-
-graham = MaleCharacter('graham')
-james = MaleCharacter('james')
-luke = MaleCharacter('luke')
-martin = MaleCharacter('martin')
-madden = FemaleCharacter('madden')
-scott = MaleCharacter('scott')
-steve = MaleCharacter('steve')
-stephanie = FemaleCharacter('stephanie')
-wei = FemaleCharacter('wei')
-zoe = FemaleCharacter('zoe')
-
-nurse = NonSpecificCharacter('nurse')
-doctor = NonSpecificCharacter('doctor')
-it_guy = MaleCharacter('it guy')
-potential_client = NonSpecificCharacter('potential client')
-patient = NonSpecificCharacter('patient')
-
-characters = Bag({andrew, byers, graham, james, luke, martin, scott, steve, stephanie, madden, wei, zoe, nurse, doctor, it_guy, potential_client, patient})
 
 # Items: ------
 mug = Item('mug') # mug of instant oatmeal in CR
@@ -45,19 +21,25 @@ byers_items = Bag({chair, laptop_item, standing_desk})
 fridge.items = Bag({ranch, burrito,})
 bc_mixing_area.items = Bag({vials})
 
-# Initial character locations: ------
+shared_office_area.items = Bag({})
+conference_room.items = Bag({})
+demo_room.items = Bag({})
+luke_byers_cubicle_area.items = Bag({})
+zoe_madden_office.items = Bag({})
 
-shared_office_area.people = Bag({andrew, graham, martin, wei})
-luke_byers_cubicle_area.people = Bag({byers, luke})
-zoe_madden_office.people = Bag({zoe})
+car.items = Bag({})
+pdx_airport.items = Bag({})
 
-wy_lobby.people = Bag({patient})
-wy_back_office_area.people = Bag({madden, doctor, nurse})
-wy_server_room.people = Bag({it_guy})
-wy_injection_area.people = Bag({stephanie, nurse})
+wy_lobby.items = Bag({})
+wy_back_office_area.items = Bag({})
+wy_server_room.items = Bag({})
+wy_injection_area.items = Bag({})
 
-bc_lobby.people = Bag({patient})
-bc_injection_area.people = Bag({nurse, patient})
-bc_mixing_area.people = Bag({nurse})
+bc_lobby.items = Bag({})
+bc_injection_area.items = Bag({})
+bc_front_desk.items = Bag({})
 
-xtract_booth.people = Bag({james, madden, scott, potential_client})
+ts_main_area.items = Bag({})
+xtract_booth.items = Bag({})
+rosch_booth.items = Bag({})
+cerner_booth.items = Bag({})

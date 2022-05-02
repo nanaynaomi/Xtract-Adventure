@@ -120,7 +120,6 @@ Slack
 """)
 
 slack = Room("""
-You have 7 notifications. Users Madden, Martin, and Zoe are online.
 """)
 
 github = Room("""
@@ -166,7 +165,7 @@ The nurses in here are talking about how amazing Summit is and how they are trea
 
 # Baker Clinic Rooms ------
 bc_lobby = Room("""
-You are standing in a large open lobby filled with chairs.
+You are standing in a large open lobby filled with chairs. A few patients are waiting.
 There is a Microsoft surface sitting on the front desk.
 """)
 
@@ -187,7 +186,7 @@ This is the front desk office area. Nothing much to do in here...
 
 # Trade Show ------
 ts_main_area = Room("""
-You enter a large convention hall with rows and rows of booths. Among them you notice booths representing Xtract Solutions, Cerner, and Rosch
+You enter a large convention hall with rows and rows of booths. Among them you notice booths representing Xtract Solutions, Cerner, and Rosch.
 """)
 
 xtract_booth = Room("""
@@ -228,6 +227,15 @@ wy_lobby.change_on_6 = True
 wy_back_office_area.change_on_6 = True
 wy_server_room.change_on_6 = True
 wy_injection_area.change_on_6 = True
+
+slack.messages = [
+        "Martin posted pictures of his cats in #catfeed and people are going crazy",
+        "A seemingly random string of memes has been posted in #random",
+        "People are discussing something called Flamin' Hot Oat Bran in #snack-chat",
+        "Luke has written some kind congratulatory messages in #general",
+        "Madden is threatening to quit again"
+    ]
+slack.have_notifications = True # Set to False after player checks notifications for that level, set to True when player starts next level.
 
 
 # Room connections: ---------------------------------------------------------
