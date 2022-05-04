@@ -16,10 +16,29 @@ def log_request(logger, body, next):
 
 @app.event("message")
 def handle_message(message, say):
-    if get_context() == 'game_over':
-        say("GAME OVER")
-    elif (message['text'].lower() == "start adventure" and get_context() == 'beginning') or get_context() != 'beginning':
-        res = handle_command(message['text'].lower())
+    user_id = message["user"]
+    player = current_players.get(user_id)
+    msg = message['text'].lower()
+    if player:
+        if msg == "start adventure":
+            say("You already have a game running with this account. To clear your progress so you can start over, say: \"quit adventure\"")
+        elif msg == "quit adventure":
+            say("Are you sure? This will delete all of your game progress and you will not be able to get it back.\n"
+                "Please say exactly: \"I understand and I want to quit the game\" to confirm.")
+        elif msg == "i understand and i want to quit the game":
+            current_players.pop(user_id)
+            del player
+            say("CONFIRMED. Deleting your progress. If you would like to start a new adventure after this, say: \"start adventure\"")
+        elif player.get_context() == "game_over":
+            current_players.pop(user_id)
+            del player
+            say("GAME OVER.\nTo restart and try again, say: \"start adventure\".")
+        else:
+            res = handle_command(msg, player)
+            if res is not None:
+                say(res)
+    elif msg == "start adventure" and not player:
+        res = start_adventure(user_id)
         if res is not None:
             say(res)
 

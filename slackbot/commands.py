@@ -4,10 +4,6 @@ from characters import *
 from items import *
 import random
 
-def update_level(lvl):
-    set_event_level(lvl)
-    slack.have_notifications = True
-
 # NAVIGATION: ---------------------------------------------------------------------
 
 @when('lb', e_key='lb', room=luke_byers_cubicle_area)
@@ -40,34 +36,35 @@ def update_level(lvl):
 @when('xb', e_key='xb', room=xtract_booth)
 @when('rb', e_key='rb', room=rosch_booth)
 @when('cb', e_key='cb', room=cerner_booth)
-def go_to(room, e_key):
-    global current_room
-    if get_context() != None:
-        set_context(None)
-    if room in room_connections[current_room]:
-        if current_room == car and room == pdx_airport:
+def go_to(p, room, e_key):
+    if p.get_context() != None:
+        p.set_context(None)
+    if room in room_connections[p.current_room]: 
+        if p.current_room == car and room == pdx_airport:
             msg = "You drive to PDX airport.\n"
+        elif room == wy_lobby and p.get_event_level() < 5:
+            return "You cannot access that place, silly goose!"
         else:
             msg = f"You {room_entry[e_key]}.\n"
-        current_room = room
-        if room == shared_office_area and get_event_level() == 6:
-            msg += the_end()
+        p.set_current_room(room)
+        if room == shared_office_area and p.get_event_level() == 6:
+            msg += the_end(p)
         else:
-            msg += look()
-    elif e_key == 'ws' and current_room == shared_office_area:
+            msg += look(p)
+    elif e_key == 'ws' and p.current_room == shared_office_area:
         msg = ("It\'s a dark, scary place. You are likely to be eaten by a grue.\n"
         "You turn back in fear and do not enter the room")
-    elif e_key == 'open_fridge' and current_room == bc_mixing_area:
-        return interact('open', 'fridge')
-    elif e_key == 'bcf' and current_room == bc_lobby:
+    elif e_key == 'open_fridge' and p.current_room == bc_mixing_area:
+        return interact(p, 'open', 'fridge')
+    elif e_key == 'bcf' and p.current_room == bc_lobby:
         msg = "You can't climb over the desk."
     else:
         msg = "You cannot access that from where you currently are."
     return msg
 
 
-def the_end():
-    update_level(7)
+def the_end(p):
+    p.set_event_level(7) 
     msg = ("\n*~ ~ YOU HAVE WON!!! CONGRATS!! ~ ~*\n\n"
         "Everyone gathers for a celebratory meeting about the successful sale and install."
         " There is cake and Big's Chicken.\nBefore anyone has a chance to take a bite..."
@@ -84,15 +81,15 @@ def the_end():
 @when('close github', e_key='close_github', room=laptop)
 @when('open github', e_key='open_github', room=github)
 @when('github', e_key='open_github', room=github)
-def laptop_access(room, e_key):
+def laptop_access(p, room, e_key):
     global previous_room
-    if inventory.find('laptop'): # If player has the laptop
-        if current_room == laptop and e_key == 'close_laptop':
-            msg = laptop_navigation(previous_room, e_key)
-        elif room and room in room_connections[current_room]:
+    if p.inventory.find('laptop'): 
+        if p.current_room == laptop and e_key == 'close_laptop':
+            msg = laptop_navigation(p, previous_room, e_key)
+        elif room and room in room_connections[p.current_room]:
             if e_key == 'open_laptop':
-                previous_room = current_room
-            msg = laptop_navigation(room, e_key)
+                previous_room = p.current_room
+            msg = laptop_navigation(p, room, e_key)
         else:
             msg = "You can't access that from where you currently are."
     else:
@@ -100,37 +97,36 @@ def laptop_access(room, e_key):
     return msg
 
 
-def laptop_navigation(room, e_key):
-    global current_room
-    if inventory.find('laptop'):
-        if get_context() != None:
-            set_context(None)
+def laptop_navigation(p, room, e_key):
+    if p.inventory.find('laptop'):
+        if p.get_context() != None:
+            p.set_context(None)
         msg = f"You {room_entry[e_key]}.\n"
-        current_room = room
-        msg += '\n'+look()
+        p.set_current_room(room)  # **** p.set_current_room(room)
+        msg += '\n'+look(p)
     return msg
 
 
 @when('where can i go')
-def where_can_i_go():
+def where_can_i_go(p):
     ''' Tells a player where they can go based on their current location/Room'''
-    if current_room == fridge:
+    if p.current_room == fridge:
         msg = "You must close fridge."
     else:
-        ignore_laptop = False if inventory.find('laptop') else True
+        ignore_laptop = False if p.inventory.find('laptop') else True
         msg = "Where you can go:"
-        if current_room == car or current_room == pdx_airport:
+        if p.current_room == car or p.current_room == pdx_airport:
             rm_guide = car_pdx_room_guide
         else:
             rm_guide = room_guide
-        for room in room_connections[current_room]:
-            if ignore_laptop and room == laptop:
+        for room in room_connections[p.current_room]:
+            if (ignore_laptop and room == laptop) or (room == wy_lobby and p.get_event_level() < 5):
                 msg += ""
             else:
                 msg += f"\n{rm_guide[room]}"
-        if current_room == shared_office_area:
+        if p.current_room == shared_office_area:
             msg += f"\nWS - Workshop"
-        elif current_room == laptop:
+        elif p.current_room == laptop:
             msg += f"\nClose laptop"
     return msg
    
@@ -144,12 +140,12 @@ def where_can_i_go():
 @when('new issue')
 @when('create github issue')
 @when('github issue')
-def github_issue():
-    if current_room == github:
-        if get_event_level() >= 4:
+def github_issue(p):
+    if p.current_room == github:
+        if p.get_event_level() >= 4:
             msg = "You already created a good issue. That's enough for today."
         else:
-            set_context('creating_issue')
+            p.set_context('creating_issue')
             msg = "You are now creating an issue. Please enter the title of your issue like so: 'issue YOUR TITLE'"
     else:
         msg = "You need to be on GitHub to do that."
@@ -157,15 +153,14 @@ def github_issue():
 
 
 @when('issue TITLE', context='creating_issue')
-def issue_title(title):
-    keywords_cat_video = []
+def issue_title(p, title):
     key_words = ["cat videos", "cat video", "cats", "more information", "smaller space", "red lines", "transparent ink", "transparent red", "red"]
     if any(word in title for word in key_words):
         msg = "Issue created! - Success! \n ~ You have a new Slack notification. ~"
-        update_level(4)
+        p.set_event_level(4)
     else:
         msg = "Issue created! - Issue rejected by Andrew with comment: \"no\"."
-    set_context(None)
+    p.set_context(None)
     msg += '\n' + "You are in an Xtract Solutions GitHub Repository, on the \"Issues\" page."
     return msg
 
@@ -174,9 +169,9 @@ def issue_title(title):
 @when('notifications')
 @when('notification')
 @when('check slack')
-def slack_notifications():
-    if current_room == slack:
-        level = get_event_level()
+def slack_notifications(p):
+    if p.current_room == slack:
+        level = p.get_event_level()
         if level == 2 or level == 3:
             msg = "Message from Zoë: \"If you hear any good ideas for Summit changes, be sure to create a git issue!\""
         elif level == 4:
@@ -192,13 +187,13 @@ def slack_notifications():
         msg = "Open Slack (in the game) to view notifications"
     return msg
 
-def get_slack_messages():
+def get_slack_messages(p):
     random.seed()
     num = random.randint(0,len(slack.messages)-1)
     msg = slack.messages[num]
-    if slack.have_notifications:
+    if p.have_notifications:
         msg += "\n:exclamation: You have notifications"
-        slack.have_notifications = False
+        p.have_notifications = False
     return msg
 
 
@@ -207,24 +202,26 @@ def get_slack_messages():
 
 
 @when('take ITEM')
-def take(item):
-    if current_room.is_laptop_room:
+def take(p, item):
+    if p.current_room.is_laptop_room:
         msg = "You cannot pick up items while using laptop."
-    elif item == 'mug' and current_room == conference_room:
+    elif item == 'mug' and p.current_room == conference_room:
         msg = "Hmm... instant oatmeal... Steve has been here. You leave the mug on the table."
-    elif item in ['needle', 'injection needle', 'syringe'] and current_room == wy_injection_area:
+    elif item in ['needle', 'injection needle', 'syringe'] and p.current_room == wy_injection_area:
         msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
+    elif p.current_room == cerner_booth and item in ['cocktail', 'champagne', 'shrimp cocktail', 'drink', 'shrimp']:
+        msg = "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
     else: 
-        obj = current_room.items.take(item)
+        obj = p.take_room_item(p.current_room, item)
         if obj:
-            inventory.add(obj)
+            p.inventory.add(obj)
             msg = f"You pick up the {obj}."
         else:
-            if item == 'furby' and current_room == shared_office_area:
+            if item == 'furby' and p.current_room == shared_office_area:
                 msg = "You cannot take the furby. It does not want to go with you."
-            elif byers_items.find(item):
+            elif p.byers_items.find(item):
                 msg = "You'll have to ask Byers for that..."
-            elif item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy'] and current_room == xtract_booth:
+            elif item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy'] and p.current_room == xtract_booth:
                 msg = "You should leave those for the customers... Maybe when the conference is over you can steal some..."
             else:
                 msg = f"There is no {item} here."
@@ -232,42 +229,45 @@ def take(item):
 
 
 @when('drop THING')
-def drop( thing):
-    if current_room.is_laptop_room:
+def drop(p, thing):
+    if p.current_room.is_laptop_room:
         msg = "You cannot drop items while using the laptop."
     else:
-        obj = inventory.take(thing)
+        obj = p.inventory.take(thing)
         if not obj:
             msg = ('You do not have a %s.' % thing)
         else:
-            current_room.items.add(obj)
+            p.add_room_item(p.current_room, obj)
             msg = ('You drop the %s.' % obj)
     return msg
 
 
 @when('look')
-def look():
-    if current_room.after_event:
-        if get_event_level() >= 6 and current_room.change_on_6:
-            msg = str(current_room.after_event)
-        elif get_event_level() >= 5 and not current_room.change_on_6:
-            msg = str(current_room.after_event)
+def look(p):
+    if p.current_room.after_event:
+        if p.get_event_level() >= 6 and p.current_room.change_on_6:
+            msg = str(p.current_room.after_event)
+        elif p.get_event_level() >= 5 and not p.current_room.change_on_6:
+            msg = str(p.current_room.after_event)
         else:
-            msg = str(current_room)
-    elif current_room == slack:
-        msg = get_slack_messages()
+            msg = str(p.current_room)
+    elif p.current_room == slack:
+        msg = get_slack_messages(p)
     else:
-        msg = str(current_room)
-    if current_room.items:
-        for i in current_room.items:
-            msg += '\n' + ('A %s is here.' % i)
+        msg = str(p.current_room)
+    if p.current_room not in [laptop, github, slack]:
+        room_items = p.get_room_items(p.current_room)
+        if room_items:
+            for i in room_items:
+                if i is not vials:
+                    msg += '\n' + ('A %s is here.' % i)
     return msg
 
 
 @when('inventory')
-def show_inventory():
+def show_inventory(p):
     msg = 'You have:'
-    for thing in inventory:
+    for thing in p.inventory:
         msg += '\n' + str(thing)
     return msg
 
@@ -276,25 +276,25 @@ def show_inventory():
 @when('give THING to RECIPIENT', action='give')
 @when('feed THING to RECIPIENT', action='feed')
 @when('feed RECIPIENT the THING', action='feed')
-def feed(recipient, thing, action):
-    food = inventory.take(thing)
+def feed(p, recipient, thing, action):
+    food = p.inventory.take(thing)
     character = characters.find(recipient)
     if not food:
         msg = (f"You do not have a {thing}.")
     elif not character:
         msg = f"You can only {action} things to humans."
-    elif not current_room.people.find(recipient):
+    elif not p.current_room.people.find(recipient):
         msg = (f"{recipient} is not here.")
     elif recipient == 'luke' and food == ranch:
         msg = (f"You {action} Luke the ranch."
             " Luke mutes his call to thank you, opens 3 new tabs, and then returns to his call, pacing noticeably faster now.")
     elif recipient == 'byers' and food == burrito:
-        update_level(1)
+        p.set_event_level(1)
         msg = (f"You {action} Byers the half breakfast burrito.\n"
             "Byers: \"Thanks! I feel much better now. Do you need anything? An office chair, laptop, standing desk?\"")
     else:
         msg = (f"{recipient} does not want the {thing}.")
-        inventory.add(food)
+        p.inventory.add(food)
     return msg
 
 
@@ -304,19 +304,19 @@ def feed(recipient, thing, action):
 @when('take ITEM from byers')
 @when('ask for ITEM from byers')
 @when('get ITEM from byers')
-def take_item_from_byers(item):
-    if current_room.items.find(item):
+def take_item_from_byers(p, item):
+    if p.get_room_items(p.current_room).find(item):
         msg = take(item)
-    elif current_room == luke_byers_cubicle_area and get_event_level() >= 1:
-        byers_obj = byers_items.take(item)
+    elif p.current_room == luke_byers_cubicle_area and p.get_event_level() >= 1:
+        byers_obj = p.byers_items.take(item)
         if byers_obj:
-            inventory.add(byers_obj)
+            p.inventory.add(byers_obj)
             if byers_obj == chair:
                 msg = ("Byers proceeds to ask: \"Should it be a rolling chair? What color do you want? Cloth or leather?\""
                     " The two of you discuss this important matter for a while until he eventually gives you a chair.")
             elif byers_obj == laptop_item:
                 msg = "Byers gives you the laptop and informs you that he created GitHub and Slack accounts for you."
-                update_level(2)
+                p.set_event_level(2)
             else:
                 msg = (f"Byers gives you a {item}.") 
         else:
@@ -327,26 +327,29 @@ def take_item_from_byers(item):
 
 @when('talk to a PERSON') # ex: "talk to a patient"
 @when('talk to PERSON')
-def talk(person):
+def talk(p, person):
     character = characters.find(person)
+    if p.current_room == cerner_booth and person in ['waiter', 'people', 'people in tuxedos', 'person', 
+        'people in black tuxedos', 'people in ballgowns', 'people in stunning ballgowns', 'person in ballgown']:
+        return "They are occupied at the moment..."
     if not character:
         return "You can only talk to other humans."
-    elif not current_room.people.find(person):
+    elif not p.current_room.people.find(person):
         return f"{person} cannot hear you."
-    level = get_event_level()
-    msg = character.get_msg(current_room, level)
+    level = p.get_event_level()
+    msg = character.get_msg(p.current_room, level)
     if character == byers:
-        if (level >= 1) and byers_items:
+        if (level >= 1) and p.byers_items:
             msg += " He asks if you need anything."
-            for i in byers_items:
+            for i in p.byers_items:
                 msg += (f" A {i}?")
     elif level == 2 and (character == james or character == nurse):
-        update_level(3)
+        p.set_event_level(3)
     elif character == potential_client:
-        if current_room.can_make_sale_here:  # if they can still make a sale here:
+        if p.can_make_sale_here(p.current_room):  # if they can still make a sale here:
             msg += (" At some point, you have the opportunity to make a sale.\n"
                 "Do you want to try making the sale? (yes or no)")
-            set_context('sale_prompt')
+            p.set_context('sale_prompt')
         else:
             msg += " After a few minutes of this, they randomly walk away without saying anything. You notice that their pockets are full of the free beer cozies..."
     return msg
@@ -360,16 +363,21 @@ def talk(person):
 @when('join call', action='join call', thing='')
 @when('erase whiteboard', action='erase board', thing='')
 @when('write on whiteboard', action='write on board', thing='')
+@when('drink THING', action='drink')
 @when('turn on THING', action='turn on')
 @when('look at THING', action='look')
 @when('use THING', action='use')
 @when('interact with THING', action='interact')
-def interact(action, thing):
+def interact(p, action, thing):
     if characters.find(thing): # if thing is person
         return talk(thing)
-    cr = current_room
+    cr = p.current_room
     msg = "I don't understand that command..." # default message
-    level = get_event_level()
+    if action == 'turn on' and (thing not in ['tv', 'computer', 'terminal'] or cr in [wy_injection_area,  bc_injection_area]):
+        return msg
+    if action == 'drink' and cr == cerner_booth:
+        return take(p, thing)
+    level = p.get_event_level()
     if cr == shared_office_area:
         if thing == 'furby':
             msg = "The furby stares deep into your soul."
@@ -389,15 +397,15 @@ def interact(action, thing):
         if action == 'join call':
             msg = "You find yourself on a call with Luke, Scott, James, and several customers."
             # if they can still make a sale here:
-            if cr.can_make_sale_here:
+            if p.can_make_sale_here(cr):
                 msg += (" At some point in the call, you have the opportunity to make a sale.\n"
                     "Do you want to try making the sale? (yes or no)")
-                set_context('sale_prompt')
+                p.set_context('sale_prompt')
             else:
                 msg += " After some time, the call ends. It was uneventful."
     elif cr == rosch_booth:
         if thing in ['computer', 'antiquated']:
-            msg = ("You hear a low hum that ets louder and louder. It quickly turns into clunking as"
+            msg = ("You turn on the computer. You hear a low hum that gets louder and louder. It quickly turns into clunking as"
                 " smoke begins to pour out of the side of the machine. You quickly turn off the computer and back away.")
     elif cr == xtract_booth:
         if thing in ['table', 'conference goodies', 'the table']:
@@ -424,8 +432,8 @@ def interact(action, thing):
             msg = "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
     elif cr == wy_server_room:
         if action == 'install' and level < 6:
-            msg = "You notice Byers login... Suddenly everything begins working... Summit is up! (The IT guy gives you a hug)"
-            update_level(6)
+            msg = "You notice Byers login... Suddenly everything begins working... Summit is up!"
+            p.set_event_level(6)
         if thing in ['terminal', 'computer', 'the terminal']:
             msg = ("You note the absence of teamviewer... Perhaps if you *install teamviewer*, Byers could help..."
                 "\nThe IT guy is currently peeking over your shoulder.") if level < 6 else "They don't want you using this now."
@@ -435,37 +443,34 @@ def interact(action, thing):
 
 @when('yes', context='sale_prompt', action='yes')
 @when('no', context='sale_prompt', action='no')
-def try_making_sale(action):
-    set_context(None)
-    level = get_event_level()
+def try_making_sale(p, action):
+    p.set_context(None)
+    level = p.get_event_level()
     if action == 'no':
         return " You have decided not to try selling to them right now."
     if level == 4:
         msg = "You successfully make the sale! Yipee!!! Perhaps you should go to the airport to check in on your new customer, Weyland-Yutani."
-        update_level(5)
-        room_connections[pdx_airport].append(wy_lobby)
+        p.set_event_level(5)
     elif level >= 5:
         msg = "Suddenly a large dinosaur comes and eats your perspective client. Oh darn... Well, you win some, you lose some."
-        current_room.can_make_sale_here = False
-        sale_rooms.pop(current_room)
+        p.sale_rooms.pop(p.current_room)
     else:
-        current_room.can_make_sale_here = False
-        sale_rooms.pop(current_room)
-        if sale_rooms:
-            for room in sale_rooms.keys():
-                msg = f"You lost this sale but you get one more try {sale_rooms[room]}."
+        p.sale_rooms.pop(p.current_room)
+        if p.sale_rooms:
+            for room in p.sale_rooms.keys():
+                msg = f"You lost this sale but you get one more try {p.sale_rooms[room]}."
                 msg += "\n Perhaps next time you should try creating a relevant issue on GitHub first. Maybe if you ask around you'll get some ideas for things to add to Summit..."
         else:
             msg = (f"You lost the sale...\n"
                 "Xtract has failed to meet its sales goals. It is unceremoniously dismantled and sold to its competitors..."
                 " Out of nowhere, Luke is eaten by a dragon... All that remains of to prove that we were ever here are Xtract Solutions beer cozies.")
-            set_context('game_over')
+            p.set_context('game_over')
     return msg
 
 
 @when('scream', action='scream')
 @when('shout', action='shout')
 @when('yell', action='yell')
-def scream(action):
+def scream(p, action):
     msg = (f"You {action}: AAAAAAAAAAAAAGGHHHH!!!")
     return msg

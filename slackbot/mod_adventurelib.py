@@ -11,53 +11,15 @@ __all__ = (
     'Item',
     'Character',
     'Bag',
-    'set_context',
-    'get_context',
-    'set_event_level',
-    'get_event_level'
+    'current_players',
+    'Player'
 )
 
 
-#: The current context.
-#:
-#: Commands will only be available if their context is "within" the currently
-#: active context, a function defined by '_match_context()`.
-current_context = 'beginning'
-current_event_level = 0
+current_players = {}
 
 #: The separator that defines the context hierarchy
 CONTEXT_SEP = '.'
-
-
-
-def set_event_level(event): 
-    """Set which event/level/stage we are at.
-    Events go from 0 to 7.
-    """
-    global current_event_level
-    if 0 <= event <= 7 and event >= current_event_level:
-        current_event_level = event
-
-def get_event_level():
-    """Get the current event level AKA the most recent event that occurred."""
-    return current_event_level
-
-
-def set_context(new_context):  
-    """Set current context.
-
-    Set the context to `None` to clear the context.
-
-    """
-    global current_context
-    _validate_context(new_context)
-    current_context = new_context
-
-
-def get_context():
-    """Get the current command context."""
-    return current_context
-
 
 def _validate_context(context):
     """Raise an exception if the given context is invalid."""
@@ -115,6 +77,73 @@ def _match_context(context, active_context):
         active_context.startswith(context) and
         active_context[clen:clen + len(CONTEXT_SEP)] in ('', CONTEXT_SEP)
     )
+
+# Player is initialized on "start adventure" command. I wonder if we should change that command to be like /adventure or something...
+class Player:
+    """Represents a player in the game. Holds all game data that will change depending on that player's actions."""
+    def __init__(self, user_id, starting_room, byers_items):
+        self._user_id = user_id
+        self.current_room = starting_room
+        self.previous_room = starting_room
+        self.byers_items = byers_items
+        self.have_notifications = True # Set to False after player checks notifications for that level, set to True when player starts next level.
+        self._current_event_level = 0
+        self._current_context = None
+        self.inventory = Bag()
+        self._room_items = {}
+        self.sale_rooms = {}
+
+    def get_user_id(self):
+        return self._user_id
+
+    def set_current_room(self, room):
+        self.current_room = room
+
+    def set_previous_room(self, room):
+        self.previous_room = room
+
+    ## current_event_level: ##
+    def set_event_level(self, event): 
+        """Set which event/level/stage we are at. Events go from 0 to 7."""
+        if 0 <= event <= 7 and event >= self._current_event_level:
+            self._current_event_level = event
+            self.have_notifications = True
+
+    def get_event_level(self):
+        """Get the current event level AKA the most recent event that occurred."""
+        return self._current_event_level
+
+    ## context: ##
+    def set_context(self, new_context):  
+        """Set current context. Set the context to `None` to clear the context."""
+        _validate_context(new_context)
+        self._current_context = new_context
+
+    def get_context(self):
+        """Get the current command context."""
+        return self._current_context
+
+    ## room_items: ##
+    def initialize_room_items(self, rooms):
+        """Fill room_items dictionary with empty Bags for each room"""
+        for room in rooms:
+            self._room_items[room] = Bag({})
+
+    def add_room_item(self, room, item):
+        """Add an item to a room's Bag in room_items"""
+        if room in self._room_items:
+            self._room_items[room].add(item)
+
+    def get_room_items(self, room):
+        """Get the items Bag of a particular room"""
+        return self._room_items[room]
+
+    def take_room_item(self, room, item):
+        return self._room_items[room].take(item)
+
+    def can_make_sale_here(self, room):
+        return (room in self.sale_rooms)
+
 
 
 class InvalidCommand(Exception):
@@ -191,22 +220,6 @@ class Character(Item):
             self._messages[room] = {lvl:"" for lvl in range(8)}
         for level in levels:
             self._messages[room][level] = message
-
-
-
-# class LevelMessages:
-#     """ """
-#     def __init__(self):
-#         self._messages = {}
-
-#     def get_msg(self, level):
-#         return self._messages[level]
-    
-#     def set_msg(self, levels, message):
-#         for level in levels:
-#             self._messages[level] = message
-
-
 
 
 
@@ -376,14 +389,14 @@ def _register(command, func, context=None, kwargs=None):
     sig = inspect.signature(func)
     func_argnames = set(sig.parameters)
     when_argnames = set(pattern.argnames) | set(kwargs.keys())
-    if func_argnames != when_argnames:
-        raise InvalidCommand(
-            'The function %s%s has the wrong signature for @when(%r)' % (
-                func.__name__, sig, command
-            ) + '\n\nThe function arguments should be (%s)' % (
-                ', '.join(pattern.argnames + list(kwargs.keys()))
-            )
-        )
+    # if func_argnames != when_argnames:
+    #     raise InvalidCommand(
+    #         'The function %s%s has the wrong signature for @when(%r)' % (
+    #             func.__name__, sig, command
+    #         ) + '\n\nThe function arguments should be (%s)' % (
+    #             ', '.join(pattern.argnames + list(kwargs.keys()))
+    #         )
+    #     )
 
     commands.append((pattern, func, kwargs))
 
@@ -478,8 +491,9 @@ class Pattern:
                     yield (take,) + tuple(buckets)
             take -= 1  # backtrack
 
-    def is_active(self):
+    def is_active(self, player):
         """Return True if a command is active in the current context."""
+        current_context = player.get_context()
         return _match_context(self.pattern_context, current_context)
 
     def ctx_order(self):
@@ -495,7 +509,6 @@ class Pattern:
         the pattern does not match.
 
         """
-        global current_context
 
         if len(input_words) < len(self.argnames):
             return None
@@ -559,7 +572,8 @@ def help():
         "look - Look around the current room/location",
         "where can I go - See which rooms/areas you can currently access",
         "talk to PERSON - You can talk to anyone in the room. Example: 'talk to byers'",
-        "look at THING / interact with THING - Example: 'look at Furby'"
+        "look at THING / interact with THING - Example: 'look at Furby'",
+        "quit adventure - Deletes your game progress forever and exits out of the game"
     ]
     for c in cmds:
         msg += (f"\n{c}")
@@ -567,7 +581,7 @@ def help():
     return msg
 
 
-def _available_commands():
+def _available_commands(player):
     """Return the list of available commands in the current context.
 
     The order will be the order in which they should be considered, which
@@ -577,7 +591,7 @@ def _available_commands():
     available_commands = []
     for c in commands:
         pattern = c[0]
-        if pattern.is_active():
+        if pattern.is_active(player):
             available_commands.append(c)
     available_commands.sort(
         key=lambda c: c[0].ctx_order(),
@@ -586,18 +600,18 @@ def _available_commands():
     return available_commands
 
 
-def handle_command(cmd):
+def handle_command(cmd, player):
     """Handle a command typed by the user."""
     ws = cmd.lower().split()
 
     if cmd.lower() == 'help' or cmd.lower() == '?':
         return help()
-    for pattern, func, kwargs in _available_commands():
+    for pattern, func, kwargs in _available_commands(player):
         args = kwargs.copy()
         matches = pattern.match(ws)
         if matches is not None:
             args.update(matches)
-            return func(**args)
+            return func(player, **args)
     else:
         return no_command_matches(cmd)
 

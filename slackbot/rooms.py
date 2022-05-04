@@ -201,7 +201,7 @@ There is no one here, just an empty booth with an antiquated computer covered in
 """)
 
 cerner_booth = Room("""
-This booth is unlike all the others... the floors are marble and there are giant crystal chandeliers hanging from the ceilings. Men in black tuxedos and women in stunning ballgowns are mingling.
+This booth is unlike all the others... the floors are marble and there are giant crystal chandeliers hanging from the ceilings. People in black tuxedos and stunning ballgowns are mingling.
 There is a huge banquet table with free champagne and shrimp cocktails.
 """)
 
@@ -211,15 +211,6 @@ Room.is_laptop_room = False
 laptop.is_laptop_room = True
 github.is_laptop_room = True
 slack.is_laptop_room = True
-
-# Rooms where a sale can be made:
-Room.can_make_sale_here = False
-demo_room.can_make_sale_here = True
-xtract_booth.can_make_sale_here = True
-sale_rooms = {
-    demo_room: "in the demo room at Xtract HQ",
-    xtract_booth: "at Xtract's booth at the tradeshow"
-}
 
 # Rooms that change on event 6:
 Room.change_on_6 = False
@@ -233,9 +224,8 @@ slack.messages = [
         "A seemingly random string of memes has been posted in #random",
         "People are discussing something called Flamin' Hot Oat Bran in #snack-chat",
         "Luke has written some kind congratulatory messages in #general",
-        "Madden is threatening to quit again"
+        "Scrolling through the channels, you see that Madden is threatening to quit again"
     ]
-slack.have_notifications = True # Set to False after player checks notifications for that level, set to True when player starts next level.
 
 
 # Room connections: ---------------------------------------------------------
@@ -249,9 +239,9 @@ room_connections = {
 
     car : [shared_office_area, bc_lobby, pdx_airport],
 
-    pdx_airport : [car, ts_main_area, laptop], # add wy_lobby after successful demo or tradeshow (event 5)
+    pdx_airport : [car, ts_main_area, laptop, wy_lobby],
 
-    laptop : [slack, github], # laptop can also access or be accessed from whatever room you are currently in...
+    laptop : [slack, github], # laptop can also access or be accessed from whatever room you are currently in
     slack : [laptop],
     github : [laptop],
 
@@ -319,8 +309,3 @@ car_pdx_room_guide = {
     wy_lobby : "WY - Weyland-Yutani Clinic",
     ts_main_area : "TS - Tradeshow"
 }
-
-
-# Initialize current room: ----
-current_room = shared_office_area
-previous_room = shared_office_area
