@@ -39,6 +39,8 @@ import random
 def go_to(p, room, e_key):
     if p.get_context() != None:
         p.set_context(None)
+    if p.current_room == fridge and room != fridge:
+        return "You need to *close the fridge* before going anywhere."
     if room in room_connections[p.current_room]: 
         if p.current_room == car and room == pdx_airport:
             msg = "You drive to PDX airport.\n"
@@ -62,6 +64,20 @@ def go_to(p, room, e_key):
         msg = "You cannot access that from where you currently are."
     return msg
 
+# laptop, fridge
+@when('open THING', action='open')
+@when('close THING', action='close')
+def open_close(p, thing, action):
+    if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge"]):
+        if action == 'open':
+            return go_to(p, fridge, "open_fridge")
+        elif action == 'close':
+            return go_to(p, shared_office_area, "close_fridge")
+    elif any(word in thing for word in ["laptop", "computer"]):
+        if action == 'open':
+            return laptop_access(p, laptop, "open_laptop")
+        elif action == 'close':
+            return laptop_access(p, None, "close_laptop")
 
 def the_end(p):
     p.set_event_level(7) 
@@ -82,18 +98,21 @@ def the_end(p):
 @when('open github', e_key='open_github', room=github)
 @when('github', e_key='open_github', room=github)
 def laptop_access(p, room, e_key):
-    global previous_room
     if p.inventory.find('laptop'): 
-        if p.current_room == laptop and e_key == 'close_laptop':
-            msg = laptop_navigation(p, previous_room, e_key)
-        elif room and room in room_connections[p.current_room]:
-            if e_key == 'open_laptop':
-                previous_room = p.current_room
+        if p.current_room.is_laptop_room and e_key == 'close_laptop':
+            return laptop_navigation(p, p.previous_room, e_key)
+        elif p.current_room == fridge and room != fridge:
+            return "You need to *close the fridge* before going anywhere."
+        elif room and not p.current_room.is_laptop_room and e_key == 'open_laptop':
+            p.previous_room = p.current_room
+        if room and room in room_connections[p.current_room]:
             msg = laptop_navigation(p, room, e_key)
         else:
             msg = "You can't access that from where you currently are."
     else:
         msg = "You need a laptop to do that."
+        if p.get_event_level() < 2: # Player has not gotten the laptop from Byers yet.
+            msg += " Byers should be able to give you a laptop."
     return msg
 
 
@@ -111,7 +130,7 @@ def laptop_navigation(p, room, e_key):
 def where_can_i_go(p):
     ''' Tells a player where they can go based on their current location/Room'''
     if p.current_room == fridge:
-        msg = "You must close fridge."
+        msg = "You need to *close the fridge* before going anywhere."
     else:
         ignore_laptop = False if p.inventory.find('laptop') else True
         msg = "Where you can go:"
@@ -125,9 +144,9 @@ def where_can_i_go(p):
             else:
                 msg += f"\n{rm_guide[room]}"
         if p.current_room == shared_office_area:
-            msg += f"\nWS - Workshop"
+            msg += "\nWS - Workshop"
         elif p.current_room == laptop:
-            msg += f"\nClose laptop"
+            msg += "\nClose laptop"
     return msg
    
 
@@ -196,10 +215,29 @@ def get_slack_messages(p):
         p.have_notifications = False
     return msg
 
+# BAD COMMAND HELPFUL RESPONSES: ------------------------------------------
+
+# @when('', cmd = '')
+def helpful_responses(p, cmd):
+    cur_room = p.current_room
+    level = p.get_event_level()
+    
+            
+
+
 
 
 # GENERAL: ----------------------------------------------------------------
 
+@when('objective')
+def objective(p):
+    level = p.get_event_level()
+
+# @when('map')
+# def get_map(p):
+#     location = p.current_room
+#     if location in []
+    
 
 @when('take ITEM')
 def take(p, item):
@@ -211,6 +249,8 @@ def take(p, item):
         msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
     elif p.current_room == cerner_booth and item in ['cocktail', 'champagne', 'shrimp cocktail', 'drink', 'shrimp']:
         msg = "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
+    elif item in ["computer", "luke's computer", "old computer", "antique computer"]:
+        msg = "You cannot take someone else's computer."
     else: 
         obj = p.take_room_item(p.current_room, item)
         if obj:
@@ -266,6 +306,8 @@ def look(p):
 
 @when('inventory')
 def show_inventory(p):
+    if p.inventory.is_empty():
+        return "Your inventory is currently empty."
     msg = 'You have:'
     for thing in p.inventory:
         msg += '\n' + str(thing)
@@ -300,10 +342,17 @@ def feed(p, recipient, thing, action):
 
 # Ask Byers for chair, laptop, or desk
 @when('ask for ITEM')
+@when('ask for the ITEM')
 @when('ask byers for ITEM')
+@when('ask byers for the ITEM')
+@when('ask byers for a ITEM')
 @when('take ITEM from byers')
+@when('take the ITEM from byers')
+@when('take a ITEM from byers')
 @when('ask for ITEM from byers')
+@when('ask for the ITEM from byers')
 @when('get ITEM from byers')
+@when('get the ITEM from byers')
 def take_item_from_byers(p, item):
     if p.get_room_items(p.current_room).find(item):
         msg = take(item)
@@ -356,45 +405,63 @@ def talk(p, person):
 
 
 # INTERACTIONS WITH THINGS IN ROOM
-@when('install teamviewer', action='install', thing='')
-@when('install teamviewer on computer', action='install', thing='')
-@when('install teamviewer on terminal', action='install', thing='')
-@when('join the call', action='join call', thing='')
-@when('join call', action='join call', thing='')
-@when('erase whiteboard', action='erase board', thing='')
-@when('write on whiteboard', action='write on board', thing='')
+@when('install teamviewer', action='install', thing='teamviewer')
+@when('install teamviewer on computer', action='install', thing='teamviewer')
+@when('install teamviewer on terminal', action='install', thing='teamviewer')
+@when('join the call', action='join', thing='call')
+@when('join call', action='join', thing='call')
+@when('erase whiteboard', action='erase', thing='whiteboard')
+@when('write on whiteboard', action='write on', thing='whiteboard')
 @when('drink THING', action='drink')
 @when('turn on THING', action='turn on')
-@when('look at THING', action='look')
+@when('look at THING', action='look at')
+@when('look at the THING', action='look at')
 @when('use THING', action='use')
-@when('interact with THING', action='interact')
+@when('use the THING', action='use')
+@when('interact with THING', action='interact with')
+@when('interact with the THING', action='interact with')
 def interact(p, action, thing):
     if characters.find(thing): # if thing is person
-        return talk(thing)
+        return talk(p, thing)
     cr = p.current_room
-    msg = "I don't understand that command..." # default message
-    if action == 'turn on' and (thing not in ['tv', 'computer', 'terminal'] or cr in [wy_injection_area,  bc_injection_area]):
+    msg = f"You cannot {action} {thing}." # default message
+    if action == 'turn on' and (thing not in ['tv', 'computer', 'terminal', 'laptop'] or cr in [wy_injection_area,  bc_injection_area]):
+        return "You can't turn that on."
+    elif action == 'drink':
+        if cr == cerner_booth:
+            return take(p, thing)
         return msg
-    if action == 'drink' and cr == cerner_booth:
-        return take(p, thing)
+    elif thing == "laptop" and action in ['use', 'interact with', 'turn on']:
+        return laptop_access(p, laptop, 'open_laptop')
     level = p.get_event_level()
     if cr == shared_office_area:
-        if thing == 'furby':
+        if thing == "furby":
             msg = "The furby stares deep into your soul."
+        elif thing == "bookshelf":
+            msg = "There are many random items on this shelf. Let's leave them be."
+        elif thing in ["desk", "desks"]:
+            msg = "Probably should just leave the desks alone..."
+        elif thing in ["kitchen", "kitchen area", "small kitchen area"]:
+            if p.get_room_items(fridge).find("burrito"): # If burrito in fridge:
+                msg = "Perhaps you should *open the fridge* and see if there's something in there that Byers might want."
+            else:
+                msg = "Just a standard little kitchen area. Not much to do here."
+        elif thing in ["fridge", "mini fridge"]:
+            return go_to(p, fridge, "open_fridge")
     elif cr == zoe_madden_office:
         if thing in ["madden's desk", "madden desk", "maddens desk"]:
             msg = "It looks like it has been vacant for a long time. You silently shed a tear."
     elif cr == conference_room:
-        if thing == 'tv' and (action == 'turn on' or action == 'interact'):
+        if thing == 'tv' and (action == 'turn on' or action == 'interact with'):
             msg = "You attempt to use the TV, but can't find the right input and eventually give up."
-        elif action == 'erase board':
+        elif action == 'erase':
             msg = "You attempt to erase the stuff on the board, but it has been there too long and cannot be erased."
-        elif action == 'write on board':
+        elif action == 'write on':
             msg = "You try to write on the board but the markers are all too dry."
         elif thing == 'whiteboard': 
             msg = "There are markers and erasers here. Perhaps you could try to write on it or erase the random scribbles."
     elif cr == demo_room:
-        if action == 'join call':
+        if action == 'join':
             msg = "You find yourself on a call with Luke, Scott, James, and several customers."
             # if they can still make a sale here:
             if p.can_make_sale_here(cr):
@@ -437,6 +504,13 @@ def interact(p, action, thing):
         if thing in ['terminal', 'computer', 'the terminal']:
             msg = ("You note the absence of teamviewer... Perhaps if you *install teamviewer*, Byers could help..."
                 "\nThe IT guy is currently peeking over your shoulder.") if level < 6 else "They don't want you using this now."
+    elif any("computer" in thing): # Default for any other computer we come across if someone looks at it.
+        if action == "interact with":
+            msg = "Yep, that's a computer. It's got like a screen and everything."
+        elif  action in ["use", "interact with"]:
+            msg = "You cannot use that computer."
+            if p.inventory.find("laptop"):
+                msg += " The only computer you can use in this room is your own laptop."
     return msg
 
 

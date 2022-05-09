@@ -16,7 +16,7 @@ room_entry = {
     'bc': "drive to Dr. Baker's clinic and go inside",
     'pdx':"fly back to PDX airport", # default is fly back to, but if they're in car they'll drive
     'wy': "fly to the Weyland-Yutani clinic and go in",
-    'ts': "fly to the tradeshow and go in",
+    'ts': "fly to the Trade Show and go in",
 
     'open_laptop':"open the laptop",
     'close_laptop':"close the laptop",
@@ -100,15 +100,13 @@ PDX - Portland International Airport
 pdx_airport = Room("""
 You are at the Portland International Airport (PDX). Where will you go?
 Car - Leave airport and go to your car
-TS - Tradeshow
-Open laptop
+TS - Trade Show
 """)
 pdx_airport.after_event = """
 You are at the Portland International Airport (PDX). Where will you go?
 Car - Leave airport and go to your car
-TS - Tradeshow
+TS - Trade Show
 WY - Weyland-Yutani Clinic
-Open laptop
 """
 
 # Laptop "Rooms" ------
@@ -242,8 +240,8 @@ room_connections = {
     pdx_airport : [car, ts_main_area, laptop, wy_lobby],
 
     laptop : [slack, github], # laptop can also access or be accessed from whatever room you are currently in
-    slack : [laptop],
-    github : [laptop],
+    slack : [laptop, github],
+    github : [laptop, slack],
 
     wy_lobby : [pdx_airport, wy_back_office_area, laptop],
     wy_back_office_area : [wy_lobby, wy_server_room, wy_injection_area, laptop],
@@ -307,5 +305,82 @@ car_pdx_room_guide = {
 
     # 'fly to' if current_room is pdx_airport
     wy_lobby : "WY - Weyland-Yutani Clinic",
-    ts_main_area : "TS - Tradeshow"
+    ts_main_area : "TS - Trade Show"
 }
+
+xhq_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of Xtract HQ"},
+    "block_id": "xhq_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/xhq_map.jpg",
+    "alt_text": "Map of Xtract HQ"
+}
+bc_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of Dr. Baker Clinic"},
+    "block_id": "bc_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/bc_map.jpg",
+    "alt_text": "Map of Dr. Baker Clinic"
+}
+carpdx1_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of places to travel"},
+    "block_id": "carpdx1_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/carpdx1_map.jpg",
+    "alt_text": "Map of places to travel"
+}
+carpdx2_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of places to travel"},
+    "block_id": "carpdx2_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/carpdx2_map.jpg",
+    "alt_text": "Map of places to travel"
+}
+ts_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of Trade Show"},
+    "block_id": "ts_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/ts_map.jpg",
+    "alt_text": "Map of Trade Show"
+}
+wy_map = {
+    "type": "image", 
+    "title": {"type": "plain_text","text": "Map of Weyland-Yutani Clinic"},
+    "block_id": "wy_map",
+    "image_url": "https://xtract-adventure-maps-xas.s3.us-west-2.amazonaws.com/wy_map.jpg",
+    "alt_text": "Map of Weyland-Yutani Clinic"
+}
+laptop_map = {
+    "type": "section",
+    "text": {"type": "mrkdwn", "text": "To view the map, please close the laptop first."}
+}
+
+
+shared_office_area.location_map = xhq_map
+conference_room.location_map = xhq_map
+demo_room.location_map = xhq_map
+fridge.location_map = xhq_map
+luke_byers_cubicle_area.location_map = xhq_map
+zoe_madden_office.location_map = xhq_map
+
+car.location_map = {1:carpdx1_map, 2:carpdx2_map}
+pdx_airport.location_map = {1:carpdx1_map, 2:carpdx2_map}
+
+laptop.location_map = laptop_map
+slack.location_map = laptop_map
+github.location_map = laptop_map
+
+wy_lobby.location_map = wy_map
+wy_back_office_area.location_map = wy_map
+wy_server_room.location_map = wy_map
+wy_injection_area.location_map = wy_map
+
+bc_lobby.location_map = bc_map
+bc_injection_area.location_map = bc_map
+bc_mixing_area.location_map = bc_map
+bc_front_desk.location_map = bc_map
+
+ts_main_area.location_map = ts_map
+xtract_booth.location_map = ts_map
+rosch_booth.location_map = ts_map
+cerner_booth.location_map = ts_map

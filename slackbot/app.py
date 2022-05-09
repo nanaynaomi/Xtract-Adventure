@@ -6,7 +6,8 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from mod_adventurelib import *
 from game import *
 
-logging.basicConfig(level=logging.DEBUG)
+
+# logging.basicConfig(level=logging.DEBUG)
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 @app.middleware # or app.use(log_request)
@@ -22,6 +23,13 @@ def handle_message(message, say):
     if player:
         if msg == "start adventure":
             say("You already have a game running with this account. To clear your progress so you can start over, say: \"quit adventure\"")
+        elif msg == "map":
+            room = player.current_room
+            if room in [car, pdx_airport]:
+                blocks = [room.location_map[1] if player.get_event_level() < 5 else room.location_map[2]]
+            else:
+                blocks = [room.location_map]
+            say(blocks=blocks, text="map")
         elif msg == "quit adventure":
             say("Are you sure? This will delete all of your game progress and you will not be able to get it back.\n"
                 "Please say exactly: \"I understand and I want to quit the game\" to confirm.")

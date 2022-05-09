@@ -168,6 +168,7 @@ class Room:
 
     def __init__(self, description):
         self.description = description.strip()
+        self.location_map = {}
 
         # Copy class Bags to instance variables
         for k, v in vars(type(self)).items():
@@ -380,6 +381,12 @@ class Bag(set):
             self.remove(obj)
         return obj
 
+    def is_empty(self):
+        """Check if bag is empty, and return None if so."""
+        if not self:
+            return True
+        return False
+
 
 def _register(command, func, context=None, kwargs=None):
     """Register func as a handler for the given command."""
@@ -561,23 +568,28 @@ def when(command, context=None, **kwargs):
     return dec
 
 
-def help():
+def help(p):
     """Print a list of the commands you can give."""
     msg = "Guide to some of the main commands: (NOT case sensitive)"
     cmds = [
-        "open/close THING - Example: 'open fridge'",
-        "take/drop ITEM - Example: 'take mug'",
-        "give/feed RECIPIENT the THING - Example: 'feed Byers the burrito'",
-        "inventory - View the items you currently have",
-        "look - Look around the current room/location",
-        "where can I go - See which rooms/areas you can currently access",
-        "talk to PERSON - You can talk to anyone in the room. Example: 'talk to byers'",
-        "look at THING / interact with THING - Example: 'look at Furby'",
-        "quit adventure - Deletes your game progress forever and exits out of the game"
+        "*interact with THING / look at THING / use THING* - You can interact with the majority of things you see in a room. Example: 'interact with Furby'",
+        "*talk to PERSON* - You can talk to anyone in the room. Example: 'talk to byers'",
+        "*open/close THING* - Example: 'open fridge'",
+        "*take/drop ITEM* - Add an item to your inventory or drop an item from your inventory on the floor. Example: 'take burrito'",
+        "*give/feed RECIPIENT the THING* - Example: 'feed Byers the burrito'",
+        "*inventory* - View the items you currently have",
+        "*where can I go* - See which rooms/areas you can currently access",
+        "*map* - Look at a map of the current building/location",
+        "*objective* - Confused about what to do? Find out your current objective",
+        "*quit adventure* - Deletes your game progress forever and exits out of the game"
     ]
+    if p.get_event_level() >= 2:
+        msg += "\nopen laptop / close laptop - Access your laptop."
     for c in cmds:
         msg += (f"\n{c}")
-    msg += (f"\n (Note: there are many other commands besides these that you can try)")
+    msg += ("\n (Note: there are many other commands besides these that you can try."
+       " The game is designed to expect you to respond with whatever feels intuitive to you."
+       " When in doubt, try typing something - and if it doesn't work, rephrase it and try again.)")
     return msg
 
 
@@ -605,7 +617,7 @@ def handle_command(cmd, player):
     ws = cmd.lower().split()
 
     if cmd.lower() == 'help' or cmd.lower() == '?':
-        return help()
+        return help(player)
     for pattern, func, kwargs in _available_commands(player):
         args = kwargs.copy()
         matches = pattern.match(ws)
