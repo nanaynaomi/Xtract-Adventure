@@ -44,6 +44,7 @@ xtract_booth.people = Bag({james, madden, scott, potential_client})
 
 
 # Character messages: -------
+
 all_levels = [lvl for lvl in range(8)]
 
 andrew.set_msg(shared_office_area, all_levels, "Andrew: \"No\"")

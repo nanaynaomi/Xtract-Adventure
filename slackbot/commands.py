@@ -2,6 +2,7 @@ from mod_adventurelib import *
 from rooms import *
 from characters import *
 from items import *
+from help import *
 import random
 
 # NAVIGATION: ---------------------------------------------------------------------
@@ -39,9 +40,9 @@ import random
 def go_to(p, room, e_key):
     if p.get_context() != None:
         p.set_context(None)
-    if p.current_room == fridge and room != fridge:
+    if p.current_room == fridge and e_key != 'close_fridge':
         return "You need to *close the fridge* before going anywhere."
-    if room in room_connections[p.current_room]: 
+    if room in p.current_room.connections: 
         if p.current_room == car and room == pdx_airport:
             msg = "You drive to PDX airport.\n"
         elif room == wy_lobby and p.get_event_level() < 5:
@@ -63,21 +64,6 @@ def go_to(p, room, e_key):
     else:
         msg = "You cannot access that from where you currently are."
     return msg
-
-# laptop, fridge
-@when('open THING', action='open')
-@when('close THING', action='close')
-def open_close(p, thing, action):
-    if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge"]):
-        if action == 'open':
-            return go_to(p, fridge, "open_fridge")
-        elif action == 'close':
-            return go_to(p, shared_office_area, "close_fridge")
-    elif any(word in thing for word in ["laptop", "computer"]):
-        if action == 'open':
-            return laptop_access(p, laptop, "open_laptop")
-        elif action == 'close':
-            return laptop_access(p, None, "close_laptop")
 
 def the_end(p):
     p.set_event_level(7) 
@@ -105,7 +91,7 @@ def laptop_access(p, room, e_key):
             return "You need to *close the fridge* before going anywhere."
         elif room and not p.current_room.is_laptop_room and e_key == 'open_laptop':
             p.previous_room = p.current_room
-        if room and room in room_connections[p.current_room]:
+        if room and room in p.current_room.connections:
             msg = laptop_navigation(p, room, e_key)
         else:
             msg = "You can't access that from where you currently are."
@@ -126,27 +112,63 @@ def laptop_navigation(p, room, e_key):
     return msg
 
 
+@when('open THING', action='open')
+def open_thing(p, thing, action):
+    if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge", "mini fridge"]):
+        return go_to(p, fridge, "open_fridge")
+    elif any(word in thing for word in ["laptop", "computer"]):
+        return laptop_access(p, laptop, "open_laptop")
+    elif 'notifications' in thing:
+        return slack_notifications(p)
+    elif 'github' in thing:
+        return laptop_access(p, github, 'open_github')
+    elif 'slack' in thing:
+        return laptop_access(p, slack, 'open_slack')
+    return f"You cannot {action} {thing}"
+
+
+@when('close THING', action='close')
+def close_thing(p, thing, action):
+    if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge", "mini fridge"]):
+        return go_to(p, shared_office_area, "close_fridge")
+    elif any(word in thing for word in ["laptop", "computer"]):
+        return laptop_access(p, None, "close_laptop")
+    elif 'github' in thing:
+        return laptop_access(p, laptop, 'close_github')
+    elif 'slack' in thing:
+        return laptop_access(p, laptop, 'close_slack')
+    return f"You cannot {action} {thing}"
+
+
 @when('where can i go')
 def where_can_i_go(p):
     ''' Tells a player where they can go based on their current location/Room'''
-    if p.current_room == fridge:
+    cr = p.current_room
+    if cr == fridge:
         msg = "You need to *close the fridge* before going anywhere."
     else:
         ignore_laptop = False if p.inventory.find('laptop') else True
         msg = "Where you can go:"
-        if p.current_room == car or p.current_room == pdx_airport:
+        if cr == slack or cr == github:
+            ignore_laptop = True
+        if cr == car or cr == pdx_airport:
             rm_guide = car_pdx_room_guide
         else:
             rm_guide = room_guide
-        for room in room_connections[p.current_room]:
+        for room in cr.connections:
             if (ignore_laptop and room == laptop) or (room == wy_lobby and p.get_event_level() < 5):
                 msg += ""
             else:
                 msg += f"\n{rm_guide[room]}"
-        if p.current_room == shared_office_area:
+        if cr == shared_office_area:
             msg += "\nWS - Workshop"
-        elif p.current_room == laptop:
+        elif cr.is_laptop_room:
+            if cr == slack:
+                msg += "\nClose Slack"
+            elif cr == github:
+                msg += "\nClose GitHub"
             msg += "\nClose laptop"
+        msg += "\nIf you would like to see a map of where you currently are, say *'map'*."
     return msg
    
 
@@ -191,95 +213,89 @@ def issue_title(p, title):
 def slack_notifications(p):
     if p.current_room == slack:
         level = p.get_event_level()
-        if level == 2 or level == 3:
-            msg = "Message from Zoë: \"If you hear any good ideas for Summit changes, be sure to create a git issue!\""
-        elif level == 4:
-            msg = ("Notification: Your issue has been completed and there is a new release of Summit."  
-                " The customers will love this. This would have taken months before Addama...")
-        elif level == 5:
-            msg = "Everyone is panicking in the support channel because Summit isn't working at the Weyland-Yutani clinic."
-        elif level == 6:
-            msg = "Everyone is going back to the office for a party."
-        else: # 7
-            msg = "Not too many important messages for you on Slack right now."
-    else:
-        msg = "Open Slack (in the game) to view notifications"
-    return msg
+        p.have_notifications = False
+        return slack.notifications[level]
+    return "Open Slack (in the game) to view notifications"
 
 def get_slack_messages(p):
     random.seed()
     num = random.randint(0,len(slack.messages)-1)
-    msg = slack.messages[num]
+    msg = f"{slack.messages[num]}"
     if p.have_notifications:
-        msg += "\n:exclamation: You have notifications"
-        p.have_notifications = False
+        msg += "\n:bell: You have notifications."
     return msg
 
-# BAD COMMAND HELPFUL RESPONSES: ------------------------------------------
 
-# @when('', cmd = '')
-def helpful_responses(p, cmd):
-    cur_room = p.current_room
-    level = p.get_event_level()
-    
-            
-
-
-
-
-# GENERAL: ----------------------------------------------------------------
+# HELP: ----------------------------------------------------------------
 
 @when('objective')
 def objective(p):
     level = p.get_event_level()
+    return f"Current Objective: {objectives[level]}\n(If you are stuck and would like a detailed hint about the current objective, say *'hint'*.)"
 
-# @when('map')
-# def get_map(p):
-#     location = p.current_room
-#     if location in []
-    
+@when('hint')
+def obj_hint(p):
+    level = p.get_event_level()
+    return f"Hint: {hints[level]}"
 
-@when('take ITEM')
-def take(p, item):
-    if p.current_room.is_laptop_room:
-        msg = "You cannot pick up items while using laptop."
-    elif item == 'mug' and p.current_room == conference_room:
-        msg = "Hmm... instant oatmeal... Steve has been here. You leave the mug on the table."
-    elif item in ['needle', 'injection needle', 'syringe'] and p.current_room == wy_injection_area:
-        msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
-    elif p.current_room == cerner_booth and item in ['cocktail', 'champagne', 'shrimp cocktail', 'drink', 'shrimp']:
-        msg = "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
-    elif item in ["computer", "luke's computer", "old computer", "antique computer"]:
-        msg = "You cannot take someone else's computer."
-    else: 
-        obj = p.take_room_item(p.current_room, item)
-        if obj:
-            p.inventory.add(obj)
-            msg = f"You pick up the {obj}."
-        else:
-            if item == 'furby' and p.current_room == shared_office_area:
-                msg = "You cannot take the furby. It does not want to go with you."
-            elif p.byers_items.find(item):
-                msg = "You'll have to ask Byers for that..."
-            elif item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy'] and p.current_room == xtract_booth:
-                msg = "You should leave those for the customers... Maybe when the conference is over you can steal some..."
-            else:
-                msg = f"There is no {item} here."
+@when('help')
+def help(p):
+    msg = "Guide to some of the main commands: (NOT case sensitive)"
+    if p.get_event_level() >= 2:
+        msg += "\nopen laptop / close laptop - Access your laptop."
+    for c in help_cmds:
+        msg += (f"\n{c}")
+    msg += ("\n (*Note:* there are many other commands besides these that you can try."
+       " The game is designed to expect you to respond with whatever feels intuitive to you."
+       " When in doubt, try typing something - and if it doesn't work, rephrase it and try again.)")
     return msg
 
+@when('tips')
+def get_tips(p):
+    return tips
 
+
+# GENERAL: ----------------------------------------------------------------
+
+@when('take ITEM')
+@when('take the ITEM')
+def take(p, item):
+    cr = p.current_room
+    if cr.is_laptop_room:
+        return "You cannot pick up items while using laptop."
+    elif cr == conference_room and item == 'mug':
+        return "Hmm... instant oatmeal... Steve has been here. You leave the mug on the table."
+    elif cr == luke_byers_cubicle_area and p.get_event_level() >= 1 and any(word in item for word in ['laptop', 'desk', 'chair']):
+        return take_item_from_byers(p, item)
+    obj = p.take_room_item(cr, item)
+    if obj:
+        p.inventory.add(obj)
+        return f"You pick up the {obj}."
+    else:
+        if item == 'furby' and cr == shared_office_area:
+            return "You cannot take the furby. It does not want to go with you."
+        elif p.byers_items.find(item):
+            return "You'll have to ask Byers for that..."
+        elif cr == xtract_booth and item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy']:
+            return "You should leave those for the customers... Maybe when the conference is over you can steal some..."
+        elif cr == wy_injection_area and item in ['needle', 'injection needle', 'syringe']:
+            return "You try to take the injection needle but the nurse karate chops it out of your hand."
+        elif cr == cerner_booth and item in ['cocktail', 'champagne', 'shrimp cocktail', 'drink', 'shrimp']:
+            return "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
+        elif item in ["computer", "luke's computer", "old computer", "antique computer"]:
+            return "You cannot take someone else's computer."
+    return f"You cannot take {item}."
+
+@when('drop the THING')
 @when('drop THING')
 def drop(p, thing):
     if p.current_room.is_laptop_room:
-        msg = "You cannot drop items while using the laptop."
-    else:
-        obj = p.inventory.take(thing)
-        if not obj:
-            msg = ('You do not have a %s.' % thing)
-        else:
-            p.add_room_item(p.current_room, obj)
-            msg = ('You drop the %s.' % obj)
-    return msg
+        return "You cannot drop items while using the laptop."
+    obj = p.inventory.take(thing)
+    if not obj:
+        return ('You do not have a %s.' % thing)
+    p.add_room_item(p.current_room, obj)
+    return ('You drop the %s.' % obj)
 
 
 @when('look')
@@ -316,73 +332,70 @@ def show_inventory(p):
 
 @when('give RECIPIENT the THING', action='give')
 @when('give THING to RECIPIENT', action='give')
+@when('give the THING to RECIPIENT', action='give')
 @when('feed THING to RECIPIENT', action='feed')
+@when('feed the THING to RECIPIENT', action='feed')
 @when('feed RECIPIENT the THING', action='feed')
 def feed(p, recipient, thing, action):
     food = p.inventory.take(thing)
     character = characters.find(recipient)
     if not food:
-        msg = (f"You do not have a {thing}.")
+        return f"You do not have a {thing}."
     elif not character:
-        msg = f"You can only {action} things to humans."
+        return f"You can only {action} things to humans."
     elif not p.current_room.people.find(recipient):
-        msg = (f"{recipient} is not here.")
+        return f"{recipient} is not here."
     elif recipient == 'luke' and food == ranch:
-        msg = (f"You {action} Luke the ranch."
+        return (f"You {action} Luke the ranch."
             " Luke mutes his call to thank you, opens 3 new tabs, and then returns to his call, pacing noticeably faster now.")
     elif recipient == 'byers' and food == burrito:
         p.set_event_level(1)
-        msg = (f"You {action} Byers the half breakfast burrito.\n"
+        return (f"You {action} Byers the {thing}.\n"
             "Byers: \"Thanks! I feel much better now. Do you need anything? An office chair, laptop, standing desk?\"")
-    else:
-        msg = (f"{recipient} does not want the {thing}.")
-        p.inventory.add(food)
-    return msg
+    p.inventory.add(food) # put it back in your inventory
+    return f"{recipient} does not want the {thing}."
 
 
 # Ask Byers for chair, laptop, or desk
-@when('ask for ITEM')
-@when('ask for the ITEM')
-@when('ask byers for ITEM')
-@when('ask byers for the ITEM')
-@when('ask byers for a ITEM')
-@when('take ITEM from byers')
-@when('take the ITEM from byers')
-@when('take a ITEM from byers')
-@when('ask for ITEM from byers')
-@when('ask for the ITEM from byers')
-@when('get ITEM from byers')
-@when('get the ITEM from byers')
+@when('ask ITEM')
+@when('get ITEM')
+@when('laptop', item='laptop')
+@when('chair', item='chair')
+@when('desk', item='desk')
 def take_item_from_byers(p, item):
-    if p.get_room_items(p.current_room).find(item):
-        msg = take(item)
-    elif p.current_room == luke_byers_cubicle_area and p.get_event_level() >= 1:
+    if p.current_room == luke_byers_cubicle_area and p.get_event_level() >= 1:
+        if "laptop" in item: # if the word "laptop" exists anywhere within ITEM
+            item = 'laptop'
+        elif "chair" in item: # if the word "chair" exists anywhere within ITEM
+            item = 'chair'
+        elif "desk" in item: # if the word "desk" exists anywhere within ITEM
+            item = 'desk'
         byers_obj = p.byers_items.take(item)
         if byers_obj:
             p.inventory.add(byers_obj)
             if byers_obj == chair:
-                msg = ("Byers proceeds to ask: \"Should it be a rolling chair? What color do you want? Cloth or leather?\""
+                return ("Byers proceeds to ask: \"Should it be a rolling chair? What color do you want? Cloth or leather?\""
                     " The two of you discuss this important matter for a while until he eventually gives you a chair.")
             elif byers_obj == laptop_item:
-                msg = "Byers gives you the laptop and informs you that he created GitHub and Slack accounts for you."
                 p.set_event_level(2)
+                return "Byers gives you the laptop and informs you that he created GitHub and Slack accounts for you."
             else:
-                msg = (f"Byers gives you a {item}.") 
-        else:
-            msg = (f"Byers does not have a {item}.")
-    else:
-        msg = "You can't do that."
-    return msg
+                return (f"Byers gives you a {item}.") 
+        return (f"He does not have that.")
+    if p.get_event_level() >= 2 and item == 'laptop' and not p.current_room.is_laptop_room and p.inventory.find('laptop'):
+        return "To open your laptop, say: *'open laptop'*"
+    return "You can't do that."
+
 
 @when('talk to a PERSON') # ex: "talk to a patient"
 @when('talk to PERSON')
+@when('speak to PERSON')
 def talk(p, person):
     character = characters.find(person)
-    if p.current_room == cerner_booth and person in ['waiter', 'people', 'people in tuxedos', 'person', 
-        'people in black tuxedos', 'people in ballgowns', 'people in stunning ballgowns', 'person in ballgown']:
+    if p.current_room == cerner_booth and any(word in person for word in ['waiter', 'people', 'tuxedo', 'person', 'ballgown']):
         return "They are occupied at the moment..."
     if not character:
-        return "You can only talk to other humans."
+        return "Character name not recognized."
     elif not p.current_room.people.find(person):
         return f"{person} cannot hear you."
     level = p.get_event_level()
@@ -396,8 +409,8 @@ def talk(p, person):
         p.set_event_level(3)
     elif character == potential_client:
         if p.can_make_sale_here(p.current_room):  # if they can still make a sale here:
-            msg += (" At some point, you have the opportunity to make a sale.\n"
-                "Do you want to try making the sale? (yes or no)")
+            msg += (f" At some point, you have the opportunity to make a sale. {p.hint_dont_sell()}"
+                "\nDo you want to try making the sale? (yes or no)")
             p.set_context('sale_prompt')
         else:
             msg += " After a few minutes of this, they randomly walk away without saying anything. You notice that their pockets are full of the free beer cozies..."
@@ -410,107 +423,155 @@ def talk(p, person):
 @when('install teamviewer on terminal', action='install', thing='teamviewer')
 @when('join the call', action='join', thing='call')
 @when('join call', action='join', thing='call')
-@when('erase whiteboard', action='erase', thing='whiteboard')
-@when('write on whiteboard', action='write on', thing='whiteboard')
+@when('erase THING', action='erase')
+@when('write on THING', action='write on')
 @when('drink THING', action='drink')
 @when('turn on THING', action='turn on')
-@when('look at THING', action='look at')
 @when('look at the THING', action='look at')
-@when('use THING', action='use')
+@when('look at THING', action='look at')
 @when('use the THING', action='use')
-@when('interact with THING', action='interact with')
+@when('use THING', action='use')
 @when('interact with the THING', action='interact with')
+@when('interact with THING', action='interact with')
 def interact(p, action, thing):
-    if characters.find(thing): # if thing is person
+    if characters.find(thing) and action not in ['drink', 'turn on', 'use']: # if thing is person
         return talk(p, thing)
     cr = p.current_room
     msg = f"You cannot {action} {thing}." # default message
-    if action == 'turn on' and (thing not in ['tv', 'computer', 'terminal', 'laptop'] or cr in [wy_injection_area,  bc_injection_area]):
+    if action == 'turn on' and (not any(word in thing for word in ['tv', 'computer', 'terminal', 'laptop']) or cr in [wy_injection_area,  bc_injection_area]):
         return "You can't turn that on."
     elif action == 'drink':
-        if cr == cerner_booth:
-            return take(p, thing)
+        return take(p, thing) if cr == cerner_booth else msg
+    elif action in ['erase', 'write on'] and not any(word in thing for word in ['board', 'whiteboard', 'scribbles']):
         return msg
     elif thing == "laptop" and action in ['use', 'interact with', 'turn on']:
         return laptop_access(p, laptop, 'open_laptop')
     level = p.get_event_level()
+
     if cr == shared_office_area:
         if thing == "furby":
-            msg = "The furby stares deep into your soul."
+            return "The furby stares deep into your soul."
         elif thing == "bookshelf":
-            msg = "There are many random items on this shelf. Let's leave them be."
+            return "There are many random items on this shelf. Let's leave them be."
         elif thing in ["desk", "desks"]:
-            msg = "Probably should just leave the desks alone..."
+            return "Probably should just leave the desks alone..."
+        elif thing == "front door":
+            return "The front door leads out to the parking lot, where your car is." if action == "look at" else go_to(p, car, 'car')
         elif thing in ["kitchen", "kitchen area", "small kitchen area"]:
             if p.get_room_items(fridge).find("burrito"): # If burrito in fridge:
-                msg = "Perhaps you should *open the fridge* and see if there's something in there that Byers might want."
-            else:
-                msg = "Just a standard little kitchen area. Not much to do here."
-        elif thing in ["fridge", "mini fridge"]:
+                return "Perhaps you should *open the fridge* and see if there's something in there that Byers might want."
+            return "Just a standard little kitchen area. Not much to do here."
+        elif thing in ["fridge", "mini fridge", "mini-fridge", "refrigerator"]:
             return go_to(p, fridge, "open_fridge")
-    elif cr == zoe_madden_office:
-        if thing in ["madden's desk", "madden desk", "maddens desk"]:
-            msg = "It looks like it has been vacant for a long time. You silently shed a tear."
+
     elif cr == conference_room:
-        if thing == 'tv' and (action == 'turn on' or action == 'interact with'):
-            msg = "You attempt to use the TV, but can't find the right input and eventually give up."
-        elif action == 'erase':
-            msg = "You attempt to erase the stuff on the board, but it has been there too long and cannot be erased."
-        elif action == 'write on':
-            msg = "You try to write on the board but the markers are all too dry."
-        elif thing == 'whiteboard': 
-            msg = "There are markers and erasers here. Perhaps you could try to write on it or erase the random scribbles."
+        if thing == 'tv':
+            if action in ['turn on', 'use', 'interact with']:
+                return "You attempt to use the TV, but can't find the right input and eventually give up."
+            return "The TV is off."
+        elif action == 'erase' or (action != 'look at' and thing == 'eraser'):
+            return "You attempt to erase the stuff on the board, but it has been there too long and cannot be erased."
+        elif action == 'write on' or (action != 'look at' and thing == 'marker'):
+            return "You try to write on the board but the markers are all too dry."
+        elif 'board' in thing: 
+            return "There are markers and erasers here. Perhaps you could try to write on it or erase the random scribbles."
+        elif thing in ['random scribbles', 'scribbles', 'writing', 'random gibberish', 'gibberish'] and action != 'use':
+            return "You examine the writing on the board, and conclude that it is just nonsensical gibberish."
+        elif thing in ['mechanical contraptions', 'contraptions', 'mechanical contraption', 'contraption', 'vials', 'miscellaneous vials']:
+            return "Probably best to leave that stuff alone."
+        elif thing == 'table':
+            return "It's just a big table. Not much to do with it."
+
     elif cr == demo_room:
-        if action == 'join':
+        if action == 'join' or thing == 'computer':
             msg = "You find yourself on a call with Luke, Scott, James, and several customers."
             # if they can still make a sale here:
             if p.can_make_sale_here(cr):
-                msg += (" At some point in the call, you have the opportunity to make a sale.\n"
-                    "Do you want to try making the sale? (yes or no)")
+                msg += (f" At some point in the call, you have the opportunity to make a sale. {p.hint_dont_sell()}"
+                    "\nDo you want to try making the sale? (yes or no)")
                 p.set_context('sale_prompt')
             else:
                 msg += " After some time, the call ends. It was uneventful."
-    elif cr == rosch_booth:
-        if thing in ['computer', 'antiquated']:
-            msg = ("You turn on the computer. You hear a low hum that gets louder and louder. It quickly turns into clunking as"
-                " smoke begins to pour out of the side of the machine. You quickly turn off the computer and back away.")
-    elif cr == xtract_booth:
-        if thing in ['table', 'conference goodies', 'the table']:
-            msg = "you see an abundance of Xtract Solutions branded beer cozies and honey stingers strewn across the table."
-        elif thing == "poster":
-            msg = "this is a nice poster."
-    elif cr == bc_lobby and thing in ['microsoft surface', 'surface', 'microsoft surface' 'ms surface']:
-        msg = "Nothing happens. You see the power cord hanging from the back..."
-    elif cr == bc_injection_area:
-        if thing == 'computer':
-            msg = "You are scolded for poor HIPAA practices."
-        elif thing in ['needle', 'injection needle', 'syringe']:
-            msg = "You try to take the injection needle but the nurse karate chops it out of your hand."
-    elif cr == bc_mixing_area:
-        if thing in ['fridge', 'refrigerator']:
-            msg = "You open the fridge and see that it is full of patient vials."
-        elif thing in ['automated mixing assistant', 'ama']:
-            msg = "Be careful, these are no longer supported... If you break it, you buy it!"
+    
+    elif cr == zoe_madden_office:
+        if thing == 'desk':
+            return "There is more than one desk in the room."
+        if "madden" in thing and "desk" in thing:
+            return "Madden's desk looks like it has been vacant for a long time. You silently shed a tear."
+        elif 'board' in thing:
+            if action == 'look at':
+                return "The board is full of information."
+            return "This board looks carefully written - probably not a good idea to mess with it."
+        elif ('zoë' in thing or 'zoe' in thing) and 'desk' in thing:
+            return "Her desk is very organized."
+
     elif cr == wy_lobby:
         if thing in ['microsoft surface login kiosk', 'microsoft surface', 'login kiosk', 'kiosk']:
-            msg = "The screen says: 404 not found" if level < 6 else "The login kiosk is so popular! You notice that everyone has a smile on their face after using it."
-    elif cr == wy_injection_area:
-        if thing in ['summit', 'computer']:
-            msg = "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
+            return "The screen says: 404 not found" if level < 6 else "The login kiosk is so popular! You notice that everyone has a smile on their face after using it."
+    
     elif cr == wy_server_room:
         if action == 'install' and level < 6:
-            msg = "You notice Byers login... Suddenly everything begins working... Summit is up!"
             p.set_event_level(6)
-        if thing in ['terminal', 'computer', 'the terminal']:
-            msg = ("You note the absence of teamviewer... Perhaps if you *install teamviewer*, Byers could help..."
+            return "You notice Byers login... Suddenly everything begins working... Summit is up!"
+        if thing in ['terminal', 'computer']:
+            return ("You note the absence of teamviewer... Perhaps if you *install teamviewer*, Byers could help..."
                 "\nThe IT guy is currently peeking over your shoulder.") if level < 6 else "They don't want you using this now."
-    elif any("computer" in thing): # Default for any other computer we come across if someone looks at it.
+
+    elif cr == wy_injection_area:
+        if thing in ['summit', 'computer']:
+            return "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
+
+    elif cr == bc_lobby:
+        if thing in ['microsoft surface', 'surface', 'microsoft surface' 'ms surface']:
+            return "Nothing happens. You see the power cord hanging from the back..."
+        elif thing in ["chair", "chairs"]:
+            return "Nothing much you can do with these chairs."
+        elif thing == "front desk" and action == "look at":
+            return "You look at the front desk. Nothing happens. Wow. That was exciting..."
+
+    elif cr == bc_injection_area:
+        if thing == 'computer':
+            return "You are scolded for poor HIPAA practices."
+        elif thing in ['needle', 'injection needle', 'syringe']:
+            return "You try to take the injection needle but the nurse karate chops it out of your hand."
+
+    elif cr == bc_mixing_area:
+        if thing in ['fridge', 'refrigerator']:
+            return "You open the fridge and see that it is full of patient vials."
+        elif thing in ['vials', 'patient vials']:
+            return "You probably shouldn't mess with those..."
+        elif thing in ['automated mixing assistant', 'ama', 'mixing assistant']:
+            return "Be careful, these are no longer supported... If you break it, you buy it!"
+
+    elif cr == ts_main_area:
+        if action == 'look at' and thing in ["rows of booths", "booths"]:
+            return "There are many booths."
+
+    elif cr == xtract_booth:
+        if thing in ['table', 'conference goodies', 'goodies']:
+            return "you see an abundance of Xtract Solutions branded beer cozies and honey stingers strewn across the table."
+        elif thing == "poster":
+            return "this is a nice poster."
+    
+    elif cr == rosch_booth:
+        if thing in ['computer', 'antiquated']:
+            return ("You turn on the computer. You hear a low hum that gets louder and louder. It quickly turns into clunking as"
+                " smoke begins to pour out of the side of the machine. You quickly turn off the computer and back away.")
+
+    elif cr == cerner_booth:
+        if action == 'look at':
+            return "So fancy!"
+        elif thing in ["banquet table", "table", "free champagne", "champagne", "cocktails", "cocktail", "drink"]:
+            return "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
+
+    elif "computer" in thing: # Default for any other computer we come across if someone looks at it.
         if action == "interact with":
-            msg = "Yep, that's a computer. It's got like a screen and everything."
-        elif  action in ["use", "interact with"]:
+            return "Yep, that's a computer. It's got like a screen and everything."
+        elif action in ["use", "interact with"]:
             msg = "You cannot use that computer."
             if p.inventory.find("laptop"):
                 msg += " The only computer you can use in this room is your own laptop."
+
     return msg
 
 
@@ -533,7 +594,7 @@ def try_making_sale(p, action):
         if p.sale_rooms:
             for room in p.sale_rooms.keys():
                 msg = f"You lost this sale but you get one more try {p.sale_rooms[room]}."
-                msg += "\n Perhaps next time you should try creating a relevant issue on GitHub first. Maybe if you ask around you'll get some ideas for things to add to Summit..."
+                msg += "\n*Hint:* Perhaps next time you should try creating a relevant issue on GitHub first. Maybe if you ask around you'll get some ideas for things to add to Summit..."
         else:
             msg = (f"You lost the sale...\n"
                 "Xtract has failed to meet its sales goals. It is unceremoniously dismantled and sold to its competitors..."
@@ -541,10 +602,14 @@ def try_making_sale(p, action):
             p.set_context('game_over')
     return msg
 
+# RANDOM FUN COMMANDS: --------------------------------------------------
 
 @when('scream', action='scream')
 @when('shout', action='shout')
 @when('yell', action='yell')
 def scream(p, action):
-    msg = (f"You {action}: AAAAAAAAAAAAAGGHHHH!!!")
-    return msg
+    return f"You {action}: AAAAAAAAAAAAAGGHHHH!!!"
+
+@when('cry')
+def cry(p):
+    return "You sob quietly for a few minutes."

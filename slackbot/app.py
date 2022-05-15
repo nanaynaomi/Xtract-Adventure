@@ -7,7 +7,7 @@ from mod_adventurelib import *
 from game import *
 
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 @app.middleware # or app.use(log_request)
@@ -30,13 +30,13 @@ def handle_message(message, say):
             else:
                 blocks = [room.location_map]
             say(blocks=blocks, text="map")
-        elif msg == "quit adventure":
-            say("Are you sure? This will delete all of your game progress and you will not be able to get it back.\n"
-                "Please say exactly: \"I understand and I want to quit the game\" to confirm.")
-        elif msg == "i understand and i want to quit the game":
+        elif msg == "i understand and i want to quit the game" or (msg == "quit adventure" and player.get_context() == "game_over"):
             current_players.pop(user_id)
             del player
             say("CONFIRMED. Deleting your progress. If you would like to start a new adventure after this, say: \"start adventure\"")
+        elif msg == "quit adventure":
+            say("Are you sure? This will delete all of your game progress and you will not be able to get it back.\n"
+                "Please say exactly: \"I understand and I want to quit the game\" to confirm.")
         elif player.get_context() == "game_over":
             current_players.pop(user_id)
             del player

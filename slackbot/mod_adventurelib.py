@@ -144,6 +144,13 @@ class Player:
     def can_make_sale_here(self, room):
         return (room in self.sale_rooms)
 
+    def hint_dont_sell(self):
+        """Need to hint to the user in this case that they will lose the game if they aren't ready yet."""
+        if len(self.sale_rooms) == 1 and self._current_event_level < 4:
+            return ("\nThink carefully - this is your *final chance* to make a sale. If you lose this sale, you will *lose the game* and all of your progress."
+                " Hint: To ensure that you're ready for this, be sure that you have successfully created a new GitHub issue first on the laptop.")
+        return ""
+
 
 
 class InvalidCommand(Exception):
@@ -169,6 +176,7 @@ class Room:
     def __init__(self, description):
         self.description = description.strip()
         self.location_map = {}
+        self.connections = []
 
         # Copy class Bags to instance variables
         for k, v in vars(type(self)).items():
@@ -568,31 +576,6 @@ def when(command, context=None, **kwargs):
     return dec
 
 
-def help(p):
-    """Print a list of the commands you can give."""
-    msg = "Guide to some of the main commands: (NOT case sensitive)"
-    cmds = [
-        "*interact with THING / look at THING / use THING* - You can interact with the majority of things you see in a room. Example: 'interact with Furby'",
-        "*talk to PERSON* - You can talk to anyone in the room. Example: 'talk to byers'",
-        "*open/close THING* - Example: 'open fridge'",
-        "*take/drop ITEM* - Add an item to your inventory or drop an item from your inventory on the floor. Example: 'take burrito'",
-        "*give/feed RECIPIENT the THING* - Example: 'feed Byers the burrito'",
-        "*inventory* - View the items you currently have",
-        "*where can I go* - See which rooms/areas you can currently access",
-        "*map* - Look at a map of the current building/location",
-        "*objective* - Confused about what to do? Find out your current objective",
-        "*quit adventure* - Deletes your game progress forever and exits out of the game"
-    ]
-    if p.get_event_level() >= 2:
-        msg += "\nopen laptop / close laptop - Access your laptop."
-    for c in cmds:
-        msg += (f"\n{c}")
-    msg += ("\n (Note: there are many other commands besides these that you can try."
-       " The game is designed to expect you to respond with whatever feels intuitive to you."
-       " When in doubt, try typing something - and if it doesn't work, rephrase it and try again.)")
-    return msg
-
-
 def _available_commands(player):
     """Return the list of available commands in the current context.
 
@@ -615,9 +598,6 @@ def _available_commands(player):
 def handle_command(cmd, player):
     """Handle a command typed by the user."""
     ws = cmd.lower().split()
-
-    if cmd.lower() == 'help' or cmd.lower() == '?':
-        return help(player)
     for pattern, func, kwargs in _available_commands(player):
         args = kwargs.copy()
         matches = pattern.match(ws)
@@ -628,6 +608,4 @@ def handle_command(cmd, player):
         return no_command_matches(cmd)
 
 
-commands = [
-    (Pattern('help'), help, {}),
-]
+commands = []

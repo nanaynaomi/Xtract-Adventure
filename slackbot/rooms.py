@@ -62,7 +62,7 @@ A mug is here.
 
 demo_room = Room("""
 When you come into this room, you hear the computer making a noise,
-its the notification for a virtual demo that is about to start. You could join the call...
+its the notification for a virtual demo that is about to start. You could *join the call*...
 """)
 demo_room.after_event = """
 This room is quiet and empty right now. Nothing much to do in here...
@@ -184,7 +184,7 @@ This is the front desk office area. Nothing much to do in here...
 
 # Trade Show ------
 ts_main_area = Room("""
-You enter a large convention hall with rows and rows of booths. Among them you notice booths representing Xtract Solutions, Cerner, and Rosch.
+You enter a large convention hall with rows and rows of booths. Among them you notice booths representing Xtract Solutions (XB), Cerner (CB), and Rosch (RB).
 """)
 
 xtract_booth = Room("""
@@ -222,42 +222,52 @@ slack.messages = [
         "A seemingly random string of memes has been posted in #random",
         "People are discussing something called Flamin' Hot Oat Bran in #snack-chat",
         "Luke has written some kind congratulatory messages in #general",
-        "Scrolling through the channels, you see that Madden is threatening to quit again"
+        "In #general, you see that Madden is threatening to quit again"
     ]
+
+slack.notifications = [
+    "",
+    "",
+    "Message from Zoë: \"If you hear any good ideas for Summit changes, be sure to create a git issue!\"",
+    "Message from Zoë: \"If you hear any good ideas for Summit changes, be sure to create a git issue!\"",
+    "Notification: Your issue has been completed and there is a new release of Summit. The customers will love this. This would have taken months before Addama...",
+    "Everyone is panicking in the support channel because Summit isn't working at the Weyland-Yutani clinic. You should probably do something about it...",
+    "You have been invited back to the office for a party.",
+    "Not too many important messages for you on Slack right now."
+]
 
 
 # Room connections: ---------------------------------------------------------
-room_connections = {
-    shared_office_area : [conference_room, demo_room, fridge, luke_byers_cubicle_area, zoe_madden_office, car, laptop],
-    conference_room : [shared_office_area, laptop],
-    demo_room : [shared_office_area, laptop],
-    fridge : [shared_office_area, laptop],
-    luke_byers_cubicle_area : [shared_office_area, laptop],
-    zoe_madden_office : [shared_office_area, laptop],
 
-    car : [shared_office_area, bc_lobby, pdx_airport],
+shared_office_area.connections = [conference_room, demo_room, fridge, luke_byers_cubicle_area, zoe_madden_office, car, laptop]
+conference_room.connections = [shared_office_area, laptop]
+demo_room.connections = [shared_office_area, laptop]
+fridge.connections = [shared_office_area, laptop]
+luke_byers_cubicle_area.connections = [shared_office_area, laptop]
+zoe_madden_office.connections = [shared_office_area, laptop]
 
-    pdx_airport : [car, ts_main_area, laptop, wy_lobby],
+car.connections = [shared_office_area, bc_lobby, pdx_airport]
 
-    laptop : [slack, github], # laptop can also access or be accessed from whatever room you are currently in
-    slack : [laptop, github],
-    github : [laptop, slack],
+pdx_airport.connections = [car, ts_main_area, laptop, wy_lobby]
 
-    wy_lobby : [pdx_airport, wy_back_office_area, laptop],
-    wy_back_office_area : [wy_lobby, wy_server_room, wy_injection_area, laptop],
-    wy_server_room : [wy_back_office_area, laptop],
-    wy_injection_area : [wy_back_office_area, laptop],
+laptop.connections = [slack, github] # laptop can also access or be accessed from whatever room you are currently in
+slack.connections = [laptop, github]
+github.connections = [laptop, slack]
 
-    bc_lobby : [car, bc_injection_area, laptop],
-    bc_injection_area : [bc_lobby, bc_mixing_area, laptop],
-    bc_mixing_area : [bc_injection_area, bc_front_desk, laptop],
-    bc_front_desk : [bc_mixing_area, laptop],
+wy_lobby.connections = [pdx_airport, wy_back_office_area, laptop]
+wy_back_office_area.connections = [wy_lobby, wy_server_room, wy_injection_area, laptop]
+wy_server_room.connections = [wy_back_office_area, laptop]
+wy_injection_area.connections = [wy_back_office_area, laptop]
 
-    ts_main_area : [pdx_airport, xtract_booth, rosch_booth, cerner_booth, laptop],
-    xtract_booth : [ts_main_area, laptop],
-    rosch_booth : [ts_main_area, laptop],
-    cerner_booth : [ts_main_area, laptop]
-}
+bc_lobby.connections = [car, bc_injection_area, laptop]
+bc_injection_area.connections = [bc_lobby, bc_mixing_area, laptop]
+bc_mixing_area.connections = [bc_injection_area, bc_front_desk, laptop]
+bc_front_desk.connections = [bc_mixing_area, laptop]
+
+ts_main_area.connections = [pdx_airport, xtract_booth, rosch_booth, cerner_booth, laptop]
+xtract_booth.connections = [ts_main_area, laptop]
+rosch_booth.connections = [ts_main_area, laptop]
+cerner_booth.connections = [ts_main_area, laptop]
 
 
 room_guide = {
@@ -307,6 +317,8 @@ car_pdx_room_guide = {
     wy_lobby : "WY - Weyland-Yutani Clinic",
     ts_main_area : "TS - Trade Show"
 }
+
+# Maps: ---------------------------------------------------------
 
 xhq_map = {
     "type": "image", 

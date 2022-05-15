@@ -12,9 +12,9 @@ RUN apt-get update \
     vim \
     curl \
     dos2unix \
-    mysql-client \
     python3 python3-venv python3-pip \ 
     && rm -rf /var/lib/apt/lists/*
+    # mysql-client \
 
 # install the nvm binary
 COPY install-nvm.sh /usr/sbin

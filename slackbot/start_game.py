@@ -24,6 +24,7 @@ def start_adventure(user_id):
         "   *'where can I go'* - where you can go and what to type\n"
         "   *'help'* -  general assistance and explanation of commands\n"
         "   *'objective'* - confused about what to do? Find out your current objective\n"
+        "   *'tips'* - get a list of helpful tips on playing the game\n"
         "Interaction is important in this game! Talk to people, interact with objects, and explore everything.\n"
         "Let's begin!\n"
         "\n"
