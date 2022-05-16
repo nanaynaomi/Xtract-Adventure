@@ -14,7 +14,6 @@ RUN apt-get update \
     dos2unix \
     python3 python3-venv python3-pip \ 
     && rm -rf /var/lib/apt/lists/*
-    # mysql-client \
 
 # install the nvm binary
 COPY install-nvm.sh /usr/sbin
@@ -25,7 +24,7 @@ RUN source /root/.bashrc && nvm install 14.16.1
 RUN npm install -g localtunnel
 SHELL ["/bin/bash", "--login", "-c"]
 
-RUN pip install slackclient slack_bolt Flask mysql-connector-python
+RUN pip install slackclient slack_bolt Flask
 RUN echo "alias python=python3" >> /root/.bashrc
 
 COPY slackbot /slackbot

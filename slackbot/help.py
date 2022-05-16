@@ -1,5 +1,4 @@
 
-
 help_cmds = [
     "*'interact with THING' / 'look at THING' / 'use THING'* - You can interact with the majority of things you see in a room. Example: 'interact with Furby'",
     "*'talk to PERSON'* - You can talk to anyone in the room. Example: 'talk to byers'",
@@ -35,13 +34,9 @@ hints = [
     "You've won. Stop asking for hints now, silly goose!"
 ]
 
-
-# Tips:
 tips = ("- You should talk to people! (*'talk to PERSON'*) Some people that you talk to will just say something amusing, while others might give relevant information to the storyline. Try not to get confused by this. You'll also notice that what a character says when you speak to them may change at different points in the game."
     "\n- Be sure to interact with things in rooms (*'interact with THING' / 'use THING'*), mostly because it's fun!"
     "\n- Use *'objective'* and *'hint'* as much as you need to."
     "\n- If you are ever stuck in a building and are having trouble finding the exit, use *'map'* to see where you need to go."
     "\n- Unsure on how to phrase what you're trying to say? *'help'* has a list of many helpful commands you can use."
 )
-    
-

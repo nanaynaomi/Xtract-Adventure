@@ -107,7 +107,7 @@ def laptop_navigation(p, room, e_key):
         if p.get_context() != None:
             p.set_context(None)
         msg = f"You {room_entry[e_key]}.\n"
-        p.set_current_room(room)  # **** p.set_current_room(room)
+        p.set_current_room(room)
         msg += '\n'+look(p)
     return msg
 
@@ -342,8 +342,10 @@ def feed(p, recipient, thing, action):
     if not food:
         return f"You do not have a {thing}."
     elif not character:
+        p.inventory.add(food)
         return f"You can only {action} things to humans."
     elif not p.current_room.people.find(recipient):
+        p.inventory.add(food)
         return f"{recipient} is not here."
     elif recipient == 'luke' and food == ranch:
         return (f"You {action} Luke the ranch."
@@ -364,12 +366,9 @@ def feed(p, recipient, thing, action):
 @when('desk', item='desk')
 def take_item_from_byers(p, item):
     if p.current_room == luke_byers_cubicle_area and p.get_event_level() >= 1:
-        if "laptop" in item: # if the word "laptop" exists anywhere within ITEM
-            item = 'laptop'
-        elif "chair" in item: # if the word "chair" exists anywhere within ITEM
-            item = 'chair'
-        elif "desk" in item: # if the word "desk" exists anywhere within ITEM
-            item = 'desk'
+        for object in ["laptop", "chair", "desk"]: 
+            if object in item: # example: if the word "laptop" exists anywhere within ITEM
+                item = object
         byers_obj = p.byers_items.take(item)
         if byers_obj:
             p.inventory.add(byers_obj)
@@ -522,9 +521,9 @@ def interact(p, action, thing):
             return "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
 
     elif cr == bc_lobby:
-        if thing in ['microsoft surface', 'surface', 'microsoft surface' 'ms surface']:
+        if 'surface' in thing or 'microsoft' in thing:
             return "Nothing happens. You see the power cord hanging from the back..."
-        elif thing in ["chair", "chairs"]:
+        elif 'chair' in thing in ["chair", "chairs"]:
             return "Nothing much you can do with these chairs."
         elif thing == "front desk" and action == "look at":
             return "You look at the front desk. Nothing happens. Wow. That was exciting..."
@@ -613,3 +612,7 @@ def scream(p, action):
 @when('cry')
 def cry(p):
     return "You sob quietly for a few minutes."
+
+@when('laugh')
+def laugh(p):
+    return "MUAHAHAHAHAHAHAHA"
