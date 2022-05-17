@@ -13,8 +13,6 @@ import random
 @when('zm', e_key='zm', room=zoe_madden_office)
 @when('soa', e_key='soa', room=shared_office_area)
 @when('ws', e_key='ws', room=None)
-@when('open fridge', e_key='open_fridge', room=fridge)
-@when('close fridge', e_key='close_fridge', room=shared_office_area)
 
 @when('car', e_key='car', room=car)
 @when('xhq', e_key='xhq', room=shared_office_area)
@@ -62,6 +60,8 @@ def go_to(p, room, e_key):
     elif e_key == 'bcf' and p.current_room == bc_lobby:
         msg = "You can't climb over the desk."
     else:
+        if p.current_room.is_laptop_room:
+            return "You need to *close the laptop* before going anywhere."
         msg = "You cannot access that from where you currently are."
     return msg
 
@@ -75,13 +75,7 @@ def the_end(p):
     return msg
 
 
-@when('open laptop', e_key='open_laptop', room=laptop)
-@when('close laptop', e_key='close_laptop', room=None) 
-@when('open slack', e_key='open_slack', room=slack)
 @when('slack', e_key='open_slack', room=slack)
-@when('close slack', e_key='close_slack', room=laptop)
-@when('close github', e_key='close_github', room=laptop)
-@when('open github', e_key='open_github', room=github)
 @when('github', e_key='open_github', room=github)
 def laptop_access(p, room, e_key):
     if p.inventory.find('laptop'): 
@@ -91,10 +85,14 @@ def laptop_access(p, room, e_key):
             return "You need to *close the fridge* before going anywhere."
         elif room and not p.current_room.is_laptop_room and e_key == 'open_laptop':
             p.previous_room = p.current_room
+        elif p.current_room != slack and e_key == 'close_slack':
+            return "Slack is not open right now."
+        elif p.current_room != github and e_key == 'close_github':
+            return "GitHub is not open right now."
         if room and room in p.current_room.connections:
             msg = laptop_navigation(p, room, e_key)
         else:
-            msg = "You can't access that from where you currently are."
+            return "You can't access that from where you currently are."
     else:
         msg = "You need a laptop to do that."
         if p.get_event_level() < 2: # Player has not gotten the laptop from Byers yet.
@@ -115,6 +113,8 @@ def laptop_navigation(p, room, e_key):
 @when('open THING', action='open')
 def open_thing(p, thing, action):
     if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge", "mini fridge"]):
+        if p.current_room == bc_mixing_area:
+            return interact(p, 'open', 'fridge')
         return go_to(p, fridge, "open_fridge")
     elif any(word in thing for word in ["laptop", "computer"]):
         return laptop_access(p, laptop, "open_laptop")
@@ -130,6 +130,8 @@ def open_thing(p, thing, action):
 @when('close THING', action='close')
 def close_thing(p, thing, action):
     if any(word in thing for word in ["fridge", "refrigerator", "mini-fridge", "mini fridge"]):
+        if p.current_room == bc_mixing_area:
+            return "You close the fridge."
         return go_to(p, shared_office_area, "close_fridge")
     elif any(word in thing for word in ["laptop", "computer"]):
         return laptop_access(p, None, "close_laptop")
@@ -197,7 +199,7 @@ def github_issue(p):
 def issue_title(p, title):
     key_words = ["cat videos", "cat video", "cats", "more information", "smaller space", "red lines", "transparent ink", "transparent red", "red"]
     if any(word in title for word in key_words):
-        msg = "Issue created! - Success! \n ~ You have a new Slack notification. ~"
+        msg = "Issue created! - Success! \n :bell: You have a new Slack notification."
         p.set_event_level(4)
     else:
         msg = "Issue created! - Issue rejected by Andrew with comment: \"no\"."
@@ -205,6 +207,7 @@ def issue_title(p, title):
     msg += '\n' + "You are in an Xtract Solutions GitHub Repository, on the \"Issues\" page."
     return msg
 
+@when('check notification')
 @when('check notifications')
 @when('check slack notifications')
 @when('notifications')
@@ -272,17 +275,17 @@ def take(p, item):
         p.inventory.add(obj)
         return f"You pick up the {obj}."
     else:
-        if item == 'furby' and cr == shared_office_area:
+        if 'furby' in item and cr == shared_office_area:
             return "You cannot take the furby. It does not want to go with you."
         elif p.byers_items.find(item):
             return "You'll have to ask Byers for that..."
-        elif cr == xtract_booth and item in ['honey stingers', 'honey stinger', 'beer cozies', 'beer cozy']:
+        elif cr == xtract_booth and any(word in item for word in ['honey', 'stinger', 'beer cozies', 'beer cozy']):
             return "You should leave those for the customers... Maybe when the conference is over you can steal some..."
-        elif cr == wy_injection_area and item in ['needle', 'injection needle', 'syringe']:
+        elif cr == wy_injection_area and any(word in item for word in ['needle', 'injection', 'syringe']):
             return "You try to take the injection needle but the nurse karate chops it out of your hand."
-        elif cr == cerner_booth and item in ['cocktail', 'champagne', 'shrimp cocktail', 'drink', 'shrimp']:
+        elif cr == cerner_booth and any(word in item for word in ['cocktail', 'champagne', 'drink', 'shrimp']):
             return "You eat shrimp and drink champagne until you begin shamelessly flirting with the cute bartender."
-        elif item in ["computer", "luke's computer", "old computer", "antique computer"]:
+        elif 'computer' in item:
             return "You cannot take someone else's computer."
     return f"You cannot take {item}."
 
@@ -337,6 +340,8 @@ def show_inventory(p):
 @when('feed the THING to RECIPIENT', action='feed')
 @when('feed RECIPIENT the THING', action='feed')
 def feed(p, recipient, thing, action):
+    if p.current_room.is_laptop_room:
+        return "Close the laptop first."
     food = p.inventory.take(thing)
     character = characters.find(recipient)
     if not food:
@@ -365,6 +370,8 @@ def feed(p, recipient, thing, action):
 @when('chair', item='chair')
 @when('desk', item='desk')
 def take_item_from_byers(p, item):
+    if p.current_room.is_laptop_room:
+        return "Close the laptop first."
     if p.current_room == luke_byers_cubicle_area and p.get_event_level() >= 1:
         for object in ["laptop", "chair", "desk"]: 
             if object in item: # example: if the word "laptop" exists anywhere within ITEM
@@ -390,6 +397,8 @@ def take_item_from_byers(p, item):
 @when('talk to PERSON')
 @when('speak to PERSON')
 def talk(p, person):
+    if p.current_room.is_laptop_room:
+        return "Close the laptop first."
     character = characters.find(person)
     if p.current_room == cerner_booth and any(word in person for word in ['waiter', 'people', 'tuxedo', 'person', 'ballgown']):
         return "They are occupied at the moment..."
@@ -436,7 +445,7 @@ def interact(p, action, thing):
     if characters.find(thing) and action not in ['drink', 'turn on', 'use']: # if thing is person
         return talk(p, thing)
     cr = p.current_room
-    msg = f"You cannot {action} {thing}." # default message
+    msg = "You need to close the laptop first" if cr.is_laptop_room else f"You cannot {action} {thing}." # default message
     if action == 'turn on' and (not any(word in thing for word in ['tv', 'computer', 'terminal', 'laptop']) or cr in [wy_injection_area,  bc_injection_area]):
         return "You can't turn that on."
     elif action == 'drink':
@@ -505,7 +514,7 @@ def interact(p, action, thing):
             return "Her desk is very organized."
 
     elif cr == wy_lobby:
-        if thing in ['microsoft surface login kiosk', 'microsoft surface', 'login kiosk', 'kiosk']:
+        if any(word in thing for word in ['microsoft', 'surface', 'login', 'kiosk']):
             return "The screen says: 404 not found" if level < 6 else "The login kiosk is so popular! You notice that everyone has a smile on their face after using it."
     
     elif cr == wy_server_room:
@@ -517,15 +526,16 @@ def interact(p, action, thing):
                 "\nThe IT guy is currently peeking over your shoulder.") if level < 6 else "They don't want you using this now."
 
     elif cr == wy_injection_area:
-        if thing in ['summit', 'computer']:
+        if any( word in thing for word in ['summit', 'computer']):
             return "Summit isn't working." if level < 6 else "Summit is working great! Now HIPAA-dee hop off that computer!"
 
     elif cr == bc_lobby:
         if 'surface' in thing or 'microsoft' in thing:
-            return "Nothing happens. You see the power cord hanging from the back..."
-        elif 'chair' in thing in ["chair", "chairs"]:
+            msg = "Nothing happens." if action != 'look at' else "The screen is dark."
+            msg += " You see the power cord hanging from the back..."
+        elif 'chair' in thing:
             return "Nothing much you can do with these chairs."
-        elif thing == "front desk" and action == "look at":
+        elif any(word in thing for word in ["front", "desk"]) and action == "look at":
             return "You look at the front desk. Nothing happens. Wow. That was exciting..."
 
     elif cr == bc_injection_area:

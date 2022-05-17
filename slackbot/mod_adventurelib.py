@@ -402,8 +402,8 @@ def _register(command, func, context=None, kwargs=None):
         kwargs = {}
     pattern = Pattern(command, context)
     sig = inspect.signature(func)
-    func_argnames = set(sig.parameters)
-    when_argnames = set(pattern.argnames) | set(kwargs.keys())
+    # func_argnames = set(sig.parameters)
+    # when_argnames = set(pattern.argnames) | set(kwargs.keys())
     # if func_argnames != when_argnames:
     #     raise InvalidCommand(
     #         'The function %s%s has the wrong signature for @when(%r)' % (

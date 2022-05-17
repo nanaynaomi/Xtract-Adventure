@@ -26,7 +26,7 @@ objectives = [
 hints = [
     "If you want Byers to offer you a laptop, you need to give him the burrito from the fridge.",
     "You need to *ask Byers for the laptop*. Once you do that, you'll have it in your inventory and you can *open* it and use it anytime.",
-    "You should go out and talk to customers and see if someone suggests any ideas for issues you could create. Try talking to people at Doctor Baker's clinic. (And *don't* try making a sale until you have created an issue successfully!)",
+    "You should go out and talk to customers and see if someone suggests any ideas for issues you could create. Try talking to people at Doctor Baker's clinic.",
     "If you don't remember the idea you heard, perhaps you should go talk to customers again. Otherwise, open Github on your laptop and create the issue!",
     "You need to go to either the demo room (join call on computer) or the trade show (talk to potential client).",
     "You must travel to Weyland-Yutani clinic, and fix the problem using the terminal in the server room.",
